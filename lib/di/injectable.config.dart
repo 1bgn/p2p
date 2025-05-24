@@ -14,6 +14,10 @@ import 'package:beam_drop/features/discovery_screen/application/tcp_client.dart'
     as _i919;
 import 'package:beam_drop/features/discovery_screen/application/tcp_server.dart'
     as _i206;
+import 'package:beam_drop/features/discovery_screen/application/ws_client.dart'
+    as _i970;
+import 'package:beam_drop/features/discovery_screen/application/ws_server.dart'
+    as _i203;
 import 'package:beam_drop/features/discovery_screen/presentation/controller/connection_controller.dart'
     as _i970;
 import 'package:beam_drop/features/discovery_screen/presentation/controller/discovery_controller.dart'
@@ -32,15 +36,16 @@ extension GetItInjectableX on _i174.GetIt {
     final injectableModule = _$InjectableModule();
     gh.lazySingleton<_i413.AppRouter>(() => injectableModule.appRouter);
     gh.lazySingleton<_i206.TcpServer>(() => _i206.TcpServer());
+    gh.lazySingleton<_i203.WsServer>(() => _i203.WsServer());
+    gh.lazySingleton<_i970.WsClient>(() => _i970.WsClient());
     gh.lazySingleton<_i919.TcpClient>(() => _i919.TcpClient());
     gh.lazySingleton<_i305.DiscoveryController>(
       () => _i305.DiscoveryController(),
     );
     gh.lazySingleton<_i970.ConnectionController>(
       () => _i970.ConnectionController(
-        client: gh<_i919.TcpClient>(),
-        server: gh<_i206.TcpServer>(),
-        discoveryController: gh<_i305.DiscoveryController>(),
+        gh<_i970.WsClient>(),
+        gh<_i203.WsServer>(),
       ),
     );
     return this;

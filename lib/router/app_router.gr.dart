@@ -31,7 +31,7 @@ class DiscoveryRoute extends PageRouteInfo<void> {
 class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
   TransferRoute({
     Key? key,
-    required Socket socket,
+    required WebSocket socket,
     required String remoteRoomCode,
     List<PageRouteInfo>? children,
   }) : super(
@@ -68,7 +68,7 @@ class TransferRouteArgs {
 
   final Key? key;
 
-  final Socket socket;
+  final WebSocket socket;
 
   final String remoteRoomCode;
 

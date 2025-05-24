@@ -1,39 +1,35 @@
 import 'dart:io';
 
-import 'package:beam_drop/features/discovery_screen/presentation/controller/discovery_controller.dart';
 import 'package:injectable/injectable.dart';
-import 'package:signals_flutter/signals_core.dart';
+import 'package:signals/signals.dart';
 
-import '../../application/tcp_client.dart';
-import '../../application/tcp_server.dart';
+import '../../application/ws_client.dart';
+import '../../application/ws_server.dart';
 import '../../domain/models/device_info.dart';
 @LazySingleton()
 class ConnectionController {
-  final DiscoveryController discoveryController;
-  ConnectionController({required this.client,required this.server,required this.discoveryController});
+  ConnectionController(this._client, this._server);
+  final WsClient _client;
+  final WsServer _server;
 
-  final TcpServer server;
-  final TcpClient client;
+  final incoming = signal<WebSocket?>(null);
 
-  /// Сокет входящего коннекта (когда кто‑то подключился к нам)
-  final incomingSocket = signal<Socket?>(null);
-
-  Future<int> startServer({int preferredPort = 8080}) async {
-    final port = await server.start(preferredPort: preferredPort);
-    server.clientStream.listen((sock) {
-      incomingSocket.value = sock;
-      discoveryController.injectPeer('unknown', sock.remoteAddress.address, sock.remotePort);
-    });
+  Future<int> startServer() async {
+    final port = await _server.start(preferredPort: 0);
+    _server.stream.listen((ws) => incoming.value = ws);
     return port;
   }
 
+  /// Новый «удобный» метод – принимает DeviceInfo
+  Future<WebSocket> connect(DeviceInfo d) =>
+      _client.connect(d.ip, d.tcpPort);
 
-  Future<Socket> connect(DeviceInfo target) async {
-    return client.connect(target.ip, target.tcpPort);
-  }
+  /// Старый метод – напрямую по ip/port (оставляем для совместимости)
+  Future<WebSocket> connectRaw(String ip, int port) =>
+      _client.connect(ip, port);
 
   void dispose() {
-    server.stop();
-    incomingSocket.dispose();
+    _server.stop();
+    incoming.dispose();
   }
 }

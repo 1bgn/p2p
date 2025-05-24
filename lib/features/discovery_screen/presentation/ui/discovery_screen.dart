@@ -1,6 +1,5 @@
 // lib/features/discovery_screen/presentation/ui/discovery_screen.dart
 import 'dart:math';
-import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../../di/injectable.dart';
 import '../../../../router/app_router.dart';
+
 import '../../../../utils/permissions.dart';
 import '../../domain/models/device_info.dart';
 import '../controller/connection_controller.dart';
@@ -25,55 +25,61 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
   final _conn = getIt<ConnectionController>();
   final _disc = getIt<DiscoveryController>();
-  String _myRoom = "";
-   String _myIp = "";
+
+  late final String _myRoom;
+  String _myIp = '0.0.0.0';
   bool _transferOpen = false;
 
   @override
   void initState() {
     super.initState();
-    _myRoom = _generateRoomCode();
+    _myRoom = _genRoom();
     _boot();
   }
 
-  String _generateRoomCode() {
-    final r = Random(DateTime.now().millisecondsSinceEpoch & 0xFFFF);
-    return (100000 + r.nextInt(900000)).toString(); // six-digit
-  }
+  String _genRoom() =>
+      (100000 +
+          Random(DateTime.now().millisecondsSinceEpoch & 0xFFFF)
+              .nextInt(900000))
+          .toString();
 
   Future<void> _boot() async {
-    final ip = await NetworkInfo().getWifiIP();
+    final ip= await NetworkInfo().getWifiIP();
     _myIp = ip ?? '0.0.0.0';
+    setState(() {}); // отрисовать IP
+
     await requestNecessaryPermissions();
 
-    final port = await _conn.startServer();
-    await _disc.start(_myRoom, port);
+    final port = await _conn.startServer(); // запускаем WsServer
+    await _disc.start(_myRoom, port);       // UDP-discovery
 
-    _conn.incomingSocket.addListener(() async {
-      final sock = _conn.incomingSocket.value;
-      if (sock != null && !_transferOpen) {
+    // реагируем на изменение incoming (Signal<WebSocket?>)
+    effect(() {
+      final ws = _conn.incoming.value;   // доступ к Signal → effect перезапустится
+      if (ws != null && !_transferOpen) {
         _transferOpen = true;
-        context.router.push(
-          TransferRoute(socket: sock, remoteRoomCode: 'Unknown'),
-        ).then((_) => _transferOpen = false);
+        context.router
+            .push(TransferRoute(socket: ws, remoteRoomCode: 'Unknown'))
+            .then((_) => _transferOpen = false);
       }
     });
   }
 
   Future<void> _connect(DeviceInfo d) async {
-    if (_transferOpen) return;                     // уже открыт чат
-    final sock = await _conn.connect(d);
+    if (_transferOpen) return;
+    final ws = await _conn.connect(d);      // WebSocket
     if (!mounted) return;
     _transferOpen = true;
-    context.router.push(
-      TransferRoute(socket: sock, remoteRoomCode: d.roomCode),
-    ).then((_) => _transferOpen = false);
+    context.router
+        .push(TransferRoute(socket: ws, remoteRoomCode: d.roomCode))
+        .then((_) => _transferOpen = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final all = watchSignal(context,_disc.discovered);
-    final devices = all.where((d) => d.ip != _myIp).toList(); // ← NEW
+    final all = watchSignal(context, _disc.discovered);
+    final devices = all.where((d) => d.ip != _myIp).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('P2P Discovery'),
@@ -82,7 +88,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
           child: Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text('My IP $_myIp   Room $_myRoom',
-                style: const TextStyle(color: Colors.black, fontSize: 12)),
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ),
         ),
       ),
@@ -104,7 +110,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
       ),
     );
   }
-
 
   @override
   void dispose() {

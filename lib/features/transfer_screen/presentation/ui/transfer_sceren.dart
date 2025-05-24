@@ -15,13 +15,15 @@ import 'package:permission_handler/permission_handler.dart';
 
 @RoutePage()
 class TransferScreen extends StatefulWidget {
-  final Socket socket;
+  final WebSocket socket;
   final String remoteRoomCode;
-  const TransferScreen({super.key, required this.socket, required this.remoteRoomCode});
+  const TransferScreen(
+      {super.key, required this.socket, required this.remoteRoomCode});
   @override
   State<TransferScreen> createState() => _TransferScreenState();
 }
 
+/* ---------------- model ---------------- */
 class _FileEntry {
   final String name;
   String path;
@@ -32,140 +34,142 @@ class _FileEntry {
       name.toLowerCase().endsWith('.jpeg') ||
       name.toLowerCase().endsWith('.gif') ||
       name.toLowerCase().endsWith('.webp');
-  _FileEntry({required this.name, required this.path, required this.sent, this.saved = false});
+  _FileEntry(
+      {required this.name,
+        required this.path,
+        required this.sent,
+        this.saved = false});
 }
 
+/* ---------------- state ---------------- */
 class _TransferScreenState extends State<TransferScreen> {
-  /* -------- chat/file state -------- */
   final _messages = <String>[];
-  final _entries = <_FileEntry>[];
+  final _fileEntries = <_FileEntry>[];
   final _txt = TextEditingController();
-  final _pending = <VoidCallback>[];
-  bool   _scheduled = false;
-  /* -------- stream parser state ---- */
-  final _headerBuf = BytesBuilder(copy: false);
-  bool   _readingBody = false;
-  int    _need = 0;
-  IOSink? _sink;
-  late String _temp, _fname;
 
-  /* -------- debounce setState ------ */
-  bool _busy = false;
-  void _ui(VoidCallback fn) {
-    _pending.add(fn);
-    if (_scheduled) return;           // уже запланирован post-frame
-    _scheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        for (final f in _pending) f();
-        _pending.clear();
-      });
-      _scheduled = false;
-    });
-  }
+  Uint8List _buf = Uint8List(0);
+  bool _readingBody = false;
+  int _need = 0;
+  IOSink? _sink;
+  late String _fname, _tmp;
+
+  void _ui(VoidCallback f) => mounted ? setState(f) : null;
 
   @override
   void initState() {
     super.initState();
     final r = AutoRouter.of(context);
-    widget.socket.listen(_on, onDone: () => WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) r.pop(); }));
+    widget.socket.listen(_onData, onDone: () {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => mounted ? r.pop() : null);
+    });
   }
 
-  /* ================= stream parser ================= */
-  void _on(Uint8List chunk) async {
-    var buf = chunk;
-    while (buf.isNotEmpty) {
-      /* ----- binary body ----- */
+  /* ---------- parser 'FILE:name:size\\n' + payload ---------- */
+  void _onData(dynamic data) async {
+    if (data is String) data = utf8.encode(data);
+    _buf = Uint8List.fromList([..._buf, ...data as Uint8List]);
+
+    while (_buf.isNotEmpty) {
       if (_readingBody) {
-        final part = buf.length > _need ? buf.sublist(0, _need) : buf;
-        _sink!.add(part);
-        _need -= part.length;
-        buf = buf.sublist(part.length);
-        if (_need == 0) {
-          await _sink!.close();
-          _ui(() {
-            _entries.add(_FileEntry(name: _fname, path: _temp, sent: false));
-            _messages.add('📥 $_fname received');
-          });
-          _readingBody = false;
+        if (_buf.length < _need) {
+          _sink!.add(_buf);
+          _need -= _buf.length;
+          _buf = Uint8List(0);
+          break;
         }
+        _sink!.add(_buf.sublist(0, _need));
+        await _sink!.close();
+        _buf = _buf.sublist(_need);
+        _readingBody = false;
+        _ui(() {
+          _fileEntries
+              .add(_FileEntry(name: _fname, path: _tmp, sent: false));
+          _messages.add('📥 $_fname received');
+        });
         continue;
       }
 
-      /* ----- header accumulation ----- */
-      final nl = buf.indexOf(10); // '\n'
-      if (nl == -1) { _headerBuf.add(buf); break; }
-      _headerBuf.add(buf.sublist(0, nl));
-      buf = buf.sublist(nl + 1);
+      final nl = _buf.indexOf(10);
+      if (nl == -1) break;
+      final line = utf8.decode(_buf.sublist(0, nl)).trim();
+      _buf = _buf.sublist(nl + 1);
 
-      final line = utf8.decode(_headerBuf.takeBytes());
-      if (line.startsWith('FILE:')) {
-        final p = line.split(':');
-        if (p.length >= 3) {
-          _fname = p[1];
-          _need  = int.parse(p[2]);
-          _temp  = '${(await getTemporaryDirectory()).path}/$_fname';
-          _sink  = File(_temp).openWrite();
-          _readingBody = true;
-        }
+      final m = RegExp(r'^FILE:([^:]+):(\d+)$').firstMatch(line);
+      if (m != null) {
+        _fname = m.group(1)!;
+        _need = int.parse(m.group(2)!);
+        _tmp = '${(await getTemporaryDirectory()).path}/$_fname';
+        _sink = File(_tmp).openWrite();
+        _readingBody = true;
       } else {
         _ui(() => _messages.add('Remote: $line'));
       }
     }
   }
 
-  /* ================= sending ======================= */
-  Future<void> _sendText() async {
-    final t = _txt.text.trim();
-    if (t.isEmpty) return;
-    widget.socket.write('$t\n');
-    await widget.socket.flush();
-    _ui(() => _messages.add('Me: $t'));
-    _txt.clear();
-  }
-
-  Future<void> _sendFile() async {
+  /* ===================== multi-send ===================== */
+  Future<void> _pickAndSendFiles() async {
     if (Platform.isIOS) {
-      final ch = await showModalBottomSheet<String>(
+      final choice = await showModalBottomSheet<String>(
         context: context,
         builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(leading: const Icon(Icons.photo),
-                title: const Text('Pick from gallery'),
+            ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text('Pick image (one)'),
                 onTap: () => Navigator.pop(context, 'gallery')),
-            ListTile(leading: const Icon(Icons.folder),
-                title: const Text('Pick any file'),
-                onTap: () => Navigator.pop(context, 'file')),
+            ListTile(
+                leading: const Icon(Icons.folder),
+                title: const Text('Pick files (multi)'),
+                onTap: () => Navigator.pop(context, 'files')),
           ]),
         ),
       );
-      if (ch == 'gallery') {
-        final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-        if (img != null) return _sendLocal(File(img.path));
+      if (choice == 'gallery') {
+        final img =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+        if (img != null) await _sendLocal(File(img.path));
+        return;
       }
     }
-    final res = await FilePicker.platform.pickFiles();
-    if (res?.files.single.path != null) _sendLocal(File(res!.files.single.path!));
+
+    final res =
+    await FilePicker.platform.pickFiles(allowMultiple: true); // ✅
+    if (res == null) return;
+    for (final p in res.files) {
+      if (p.path != null) await _sendLocal(File(p.path!));
+    }
   }
 
   Future<void> _sendLocal(File f) async {
-    final b = await f.readAsBytes();
-    widget.socket.add(utf8.encode('FILE:${f.uri.pathSegments.last}:${b.length}\n'));
-    widget.socket.add(b);
-    await widget.socket.flush();
+    final bytes = await f.readAsBytes();
+    widget.socket.add('FILE:${f.uri.pathSegments.last}:${bytes.length}\n');
+    widget.socket.add(bytes);
     _ui(() {
-      _entries.add(_FileEntry(name: f.uri.pathSegments.last, path: f.path, sent: true, saved: true));
+      _fileEntries.add(_FileEntry(
+          name: f.uri.pathSegments.last,
+          path: f.path,
+          sent: true,
+          saved: true));
       _messages.add('Me: Sent file ${f.uri.pathSegments.last}');
     });
   }
 
-  /* =============== download helper ================= */
+  /* ---------------- sending text ---------------- */
+  Future<void> _sendText() async {
+    final t = _txt.text.trim();
+    if (t.isEmpty) return;
+    widget.socket.add('$t\n');
+    _ui(() => _messages.add('Me: $t'));
+    _txt.clear();
+  }
+
+  /* ---------------- download ---------------- */
   Future<void> _download(_FileEntry e) async {
     if (e.saved) return;
     final bytes = await File(e.path).readAsBytes();
     String dest = e.path;
-
     if (Platform.isIOS && e.isImage) {
       await Permission.photos.request();
       final res = await ImageGallerySaver.saveImage(bytes, name: e.name);
@@ -178,34 +182,43 @@ class _TransferScreenState extends State<TransferScreen> {
         dest = d.path;
       }
     }
-    _ui(() { e.path = dest; e.saved = true; });
+    _ui(() {
+      e.path = dest;
+      e.saved = true;
+    });
   }
 
-  /* ====================== UI ======================= */
-  void _show(_FileEntry e) {
-    if (e.isImage) {
-      showDialog(context: context, builder: (_) =>
-          Dialog(child: InteractiveViewer(child: Image.file(File(e.path)))));
-    } else {
-      OpenFilex.open(e.path);
-    }
-  }
+  /* ---------------- UI ---------------- */
+  void _show(_FileEntry f) => f.isImage
+      ? showDialog(
+      context: context,
+      builder: (_) => Dialog(
+          child: InteractiveViewer(child: Image.file(File(f.path)))))
+      : OpenFilex.open(f.path);
 
-  Widget _chat()  => ListView.builder(padding: const EdgeInsets.all(8), itemCount: _messages.length, itemBuilder: (_, i) => Text(_messages[i]));
+  Widget _chat() => ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _messages.length,
+      itemBuilder: (_, i) => Text(_messages[i]));
+
   Widget _files() => ListView.separated(
       padding: const EdgeInsets.all(8),
-      itemCount: _entries.length,
+      itemCount: _fileEntries.length,
       separatorBuilder: (_, __) => const Divider(),
       itemBuilder: (_, i) {
-        final f = _entries[i];
+        final f = _fileEntries[i];
         return ListTile(
           leading: f.isImage
-              ? Image.file(File(f.path), width: 48, height: 48, fit: BoxFit.cover)
+              ? Image.file(File(f.path),
+              width: 48, height: 48, fit: BoxFit.cover)
               : Icon(f.sent ? Icons.upload_file : Icons.insert_drive_file),
           title: Text(f.name),
-          subtitle: Text(f.sent ? 'sent' : f.saved ? 'received' : 'tap ↓ to save'),
+          subtitle: Text(
+              f.sent ? 'sent' : f.saved ? 'received' : 'tap ↓ to save'),
           trailing: (!f.sent && !f.saved)
-              ? IconButton(icon: const Icon(Icons.download), onPressed: () => _download(f))
+              ? IconButton(
+              icon: const Icon(Icons.download),
+              onPressed: () => _download(f))
               : null,
           onTap: () => _show(f),
         );
@@ -214,9 +227,16 @@ class _TransferScreenState extends State<TransferScreen> {
   Widget _bar() => Padding(
     padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
     child: Row(children: [
-      Expanded(child: TextField(controller: _txt, onSubmitted: (_) => _sendText(), decoration: const InputDecoration(labelText: 'Say something'))),
-      IconButton(icon: const Icon(Icons.attach_file), onPressed: _sendFile),
-      IconButton(icon: const Icon(Icons.send),       onPressed: _sendText),
+      Expanded(
+          child: TextField(
+              controller: _txt,
+              onSubmitted: (_) => _sendText(),
+              decoration:
+              const InputDecoration(labelText: 'Say something'))),
+      IconButton(
+          icon: const Icon(Icons.attach_file),
+          onPressed: _pickAndSendFiles),             // ← multi-file
+      IconButton(icon: const Icon(Icons.send), onPressed: _sendText),
     ]),
   );
 
@@ -226,7 +246,8 @@ class _TransferScreenState extends State<TransferScreen> {
     child: Scaffold(
       appBar: AppBar(
           title: Text('Chat with ${widget.remoteRoomCode}'),
-          bottom: const TabBar(tabs: [Tab(text: 'Chat'), Tab(text: 'Files')])),
+          bottom:
+          const TabBar(tabs: [Tab(text: 'Chat'), Tab(text: 'Files')])),
       body: TabBarView(children: [_chat(), _files()]),
       bottomNavigationBar: _bar(),
     ),
@@ -235,7 +256,7 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   void dispose() {
     _txt.dispose();
-    widget.socket.destroy();
+    widget.socket.close();
     super.dispose();
   }
 }
