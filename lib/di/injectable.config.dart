@@ -31,8 +31,8 @@ extension GetItInjectableX on _i174.GetIt {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final injectableModule = _$InjectableModule();
     gh.lazySingleton<_i413.AppRouter>(() => injectableModule.appRouter);
-    gh.lazySingleton<_i919.TcpClient>(() => _i919.TcpClient());
     gh.lazySingleton<_i206.TcpServer>(() => _i206.TcpServer());
+    gh.lazySingleton<_i919.TcpClient>(() => _i919.TcpClient());
     gh.lazySingleton<_i305.DiscoveryController>(
       () => _i305.DiscoveryController(),
     );
@@ -40,6 +40,7 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i970.ConnectionController(
         client: gh<_i919.TcpClient>(),
         server: gh<_i206.TcpServer>(),
+        discoveryController: gh<_i305.DiscoveryController>(),
       ),
     );
     return this;

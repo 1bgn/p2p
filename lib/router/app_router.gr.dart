@@ -21,7 +21,7 @@ class DiscoveryRoute extends PageRouteInfo<void> {
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return DiscoveryScreen();
+      return const DiscoveryScreen();
     },
   );
 }

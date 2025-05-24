@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../../di/injectable.dart';
@@ -24,7 +25,9 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
   final _conn = getIt<ConnectionController>();
   final _disc = getIt<DiscoveryController>();
-  late final String _myRoom;
+  String _myRoom = "";
+   String _myIp = "";
+  bool _transferOpen = false;
 
   @override
   void initState() {
@@ -39,32 +42,49 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
   }
 
   Future<void> _boot() async {
+    final ip = await NetworkInfo().getWifiIP();
+    _myIp = ip ?? '0.0.0.0';
     await requestNecessaryPermissions();
+
     final port = await _conn.startServer();
     await _disc.start(_myRoom, port);
 
-    _conn.incomingSocket.addListener(() {
+    _conn.incomingSocket.addListener(() async {
       final sock = _conn.incomingSocket.value;
-      if (sock != null) context.router.push(
-        TransferRoute(socket: sock, remoteRoomCode: 'Unknown'),
-      );
+      if (sock != null && !_transferOpen) {
+        _transferOpen = true;
+        context.router.push(
+          TransferRoute(socket: sock, remoteRoomCode: 'Unknown'),
+        ).then((_) => _transferOpen = false);
+      }
     });
   }
 
-  void _connect(DeviceInfo dev) async {
-    final sock = await _conn.connect(dev);
+  Future<void> _connect(DeviceInfo d) async {
+    if (_transferOpen) return;                     // уже открыт чат
+    final sock = await _conn.connect(d);
     if (!mounted) return;
+    _transferOpen = true;
     context.router.push(
-      TransferRoute(socket: sock, remoteRoomCode: dev.roomCode),
-    );
+      TransferRoute(socket: sock, remoteRoomCode: d.roomCode),
+    ).then((_) => _transferOpen = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final devices = watchSignal(context,_disc.discovered);
+    final all = watchSignal(context,_disc.discovered);
+    final devices = all.where((d) => d.ip != _myIp).toList(); // ← NEW
     return Scaffold(
       appBar: AppBar(
         title: const Text('P2P Discovery'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('My IP $_myIp   Room $_myRoom',
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+        ),
       ),
       body: ListView.separated(
         itemCount: devices.length,
@@ -84,6 +104,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
       ),
     );
   }
+
 
   @override
   void dispose() {

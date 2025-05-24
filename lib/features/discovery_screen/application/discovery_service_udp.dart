@@ -9,7 +9,7 @@ import 'package:collection/collection.dart';
 import '../domain/models/device_info.dart';
 
 const discoveryPort = 12345;
-const discoveryInterval = Duration(seconds: 3);
+const discoveryInterval = Duration(seconds: 1);
 const prefix = 'DISCOVER:';                 // DISCOVER:<room>:<port>
 
 /// Возвращает список broadcast-адресов всех IPv4-интерфейсов.

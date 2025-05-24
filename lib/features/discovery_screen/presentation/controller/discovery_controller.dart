@@ -13,10 +13,10 @@ class DiscoveryController {
 
   final discovered = Signal<List<DeviceInfo>>([]);
   final _cache = <String, DeviceInfo>{};
-
+  static const _grace = Duration(seconds: 2);
   StreamSubscription? _udpSub, _nsdSub;
   Timer? _ttlTimer;
-  static const _ttl = Duration(seconds: 15);
+  static const _ttl = Duration(seconds: 5);
 
   Future<void> start(String room, int tcpPort) async {
     await _udp.start(room, tcpPort);
@@ -37,7 +37,14 @@ class DiscoveryController {
   }
 
   void _mergeList(List<DeviceInfo> list) => list.forEach(_merge);
-
+  void injectPeer(String room, String ip, int port) {
+    _merge(DeviceInfo(
+      roomCode: room,
+      ip: ip,
+      tcpPort: port,
+      lastSeen: DateTime.now(),
+    ));
+  }
   void _merge(DeviceInfo d) {
     _cache[d.ip] = d;
     _refresh();
@@ -45,7 +52,9 @@ class DiscoveryController {
 
   void _purge() {
     final now = DateTime.now();
-    _cache.removeWhere((_, d) => now.difference(d.lastSeen) > _ttl);
+    _cache.removeWhere(
+            (_, d) => now.difference(d.lastSeen) > _ttl + _grace
+    );
     _refresh();
   }
 

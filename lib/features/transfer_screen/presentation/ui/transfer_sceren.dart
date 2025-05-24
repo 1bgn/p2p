@@ -39,9 +39,12 @@ class _TransferScreenState extends State<TransferScreen> {
   Uint8List _stash = Uint8List(0);
 
   // safe setState
-  void _safe(VoidCallback fn) {
-    if (!mounted) return;
+  bool _pendingRefresh = false;
+  void _fast(VoidCallback fn) {
+    if (_pendingRefresh) return;
+    _pendingRefresh = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pendingRefresh = false;
       if (mounted) setState(fn);
     });
   }
@@ -70,7 +73,7 @@ class _TransferScreenState extends State<TransferScreen> {
           await _fileSink!.flush();
           await _fileSink!.close();
           final saved = await _localPath(_fileName);
-          _safe(() {
+          _fast(() {
             _files.add(_FileEntry(name: _fileName, path: saved, sent: false));
             _messages.add('📥 $_fileName received');
           });
@@ -104,7 +107,7 @@ class _TransferScreenState extends State<TransferScreen> {
           _receivingFile = true;
         }
       } else {
-        _safe(() => _messages.add('Remote: $line'));
+        _fast(() => _messages.add('Remote: $line'));
       }
     }
   }
@@ -114,7 +117,7 @@ class _TransferScreenState extends State<TransferScreen> {
     if (txt.isEmpty) return;
     widget.socket.write('$txt\n');
     await widget.socket.flush();
-    _safe(() => _messages.add('Me: $txt'));
+    _fast(() => _messages.add('Me: $txt'));
     _textCtrl.clear();
   }
 
@@ -127,7 +130,7 @@ class _TransferScreenState extends State<TransferScreen> {
     widget.socket.add(utf8.encode(header));
     widget.socket.add(bytes);
     await widget.socket.flush();
-    _safe(() {
+    _fast(() {
       _files.add(_FileEntry(name: file.uri.pathSegments.last, path: file.path, sent: true));
       _messages.add('Me: Sent file ${file.uri.pathSegments.last}');
     });

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:beam_drop/features/discovery_screen/presentation/controller/discovery_controller.dart';
 import 'package:injectable/injectable.dart';
 import 'package:signals_flutter/signals_core.dart';
 
@@ -8,8 +9,8 @@ import '../../application/tcp_server.dart';
 import '../../domain/models/device_info.dart';
 @LazySingleton()
 class ConnectionController {
-
-  ConnectionController({required this.client,required this.server});
+  final DiscoveryController discoveryController;
+  ConnectionController({required this.client,required this.server,required this.discoveryController});
 
   final TcpServer server;
   final TcpClient client;
@@ -19,7 +20,10 @@ class ConnectionController {
 
   Future<int> startServer({int preferredPort = 8080}) async {
     final port = await server.start(preferredPort: preferredPort);
-    server.clientStream.listen((sock) => incomingSocket.value = sock);
+    server.clientStream.listen((sock) {
+      incomingSocket.value = sock;
+      discoveryController.injectPeer('unknown', sock.remoteAddress.address, sock.remotePort);
+    });
     return port;
   }
 
