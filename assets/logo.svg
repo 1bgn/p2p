@@ -1,0 +1,18 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="beam" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#4EB0FF"/>
+            <stop offset="1" stop-color="#2C5AFF"/>
+        </linearGradient>
+    </defs>
+
+    <!-- Background -->
+    <rect width="128" height="128" rx="28" fill="url(#beam)"/>
+
+    <!-- File icon -->
+    <path d="M42 36C42 33.7909 43.7909 32 46 32H72L86 46V92C86 94.2091 84.2091 96 82 96H46C43.7909 96 42 94.2091 42 92V36Z" fill="white"/>
+    <path d="M72 32V46H86" fill="white"/>
+
+    <!-- Beam/arrow -->
+    <path d="M56 52L90 68L66 72L74 98L42 74L60 70L56 52Z" fill="#2C5AFF" fill-opacity="0.9"/>
+</svg>
