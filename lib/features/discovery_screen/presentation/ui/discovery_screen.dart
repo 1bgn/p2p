@@ -82,7 +82,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
           child: Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text('My IP $_myIp   Room $_myRoom',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: const TextStyle(color: Colors.black, fontSize: 12)),
           ),
         ),
       ),

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Need to save received images to your Photos</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Need access to pick images from gallery</string>
     <!-- Local Network permission (обязателен для UDP-broadcast/TCP) -->
     <key>NSLocalNetworkUsageDescription</key>
     <string>Приложению нужен доступ к локальной сети, чтобы обнаруживать соседние устройства и передавать файлы.</string>
