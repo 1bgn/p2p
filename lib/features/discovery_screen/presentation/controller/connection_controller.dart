@@ -20,13 +20,10 @@ class ConnectionController {
     return port;
   }
 
-  /// Новый «удобный» метод – принимает DeviceInfo
+
   Future<WebSocket> connect(DeviceInfo d) =>
       _client.connect(d.ip, d.tcpPort);
 
-  /// Старый метод – напрямую по ip/port (оставляем для совместимости)
-  Future<WebSocket> connectRaw(String ip, int port) =>
-      _client.connect(ip, port);
 
   void dispose() {
     _server.stop();

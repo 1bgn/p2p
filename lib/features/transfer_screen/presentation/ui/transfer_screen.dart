@@ -1,8 +1,8 @@
 // lib/features/transfer_screen/presentation/ui/transfer_screen.dart
 //
-// Complete transfer screen with WebSocket chat and file transfer.
-// Uses a background isolate for parsing incoming frames,
-// with length‐prefixed JSON headers + streaming binary bodies.
+// WebSocket-чат + файлообмен, с обёрткой парсера в изоляте,
+// length-prefixed JSON-заголовки + streaming bodies,
+// «Save As…» на macOS и iOS (non-image) через file_selector.
 
 import 'dart:async';
 import 'dart:convert';
@@ -13,6 +13,7 @@ import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +22,8 @@ import 'package:downloads_path_provider_28/downloads_path_provider_28.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:open_filex/open_filex.dart';
+
+import '../../domain/model/file_entry.dart';
 
 @RoutePage()
 class TransferScreen extends StatefulWidget {
@@ -37,26 +40,11 @@ class TransferScreen extends StatefulWidget {
   State<TransferScreen> createState() => _TransferScreenState();
 }
 
-class _FileEntry {
-  final String name;
-  String path;
-  final bool sent;
-  bool saved;
 
-  _FileEntry({
-    required this.name,
-    required this.path,
-    required this.sent,
-    this.saved = false,
-  });
-
-  bool get isImage =>
-      RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(name.toLowerCase());
-}
 
 class _TransferScreenState extends State<TransferScreen> {
   final _messages = <String>[];
-  final _files = <_FileEntry>[];
+  final _files = <FileEntry>[];
   final _txt = TextEditingController();
 
   late ReceivePort _uiReceivePort;
@@ -66,31 +54,37 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   void initState() {
     super.initState();
-    // 1) Setup UI receive port
+
+    // 1) Prepare ReceivePort for isolate → UI messages
     _uiReceivePort = ReceivePort();
     _uiReceivePort.listen(_handleIsolateMessage);
 
-    // 2) Spawn parser isolate, passing UI sendPort + root token
+    // 2) Spawn parser isolate, pass SendPort + root token
     final token = ui.RootIsolateToken.instance!;
-    Isolate.spawn(_parserEntry, [_uiReceivePort.sendPort, token])
-        .then((iso) => _parserIsolate = iso);
+    Isolate.spawn(
+      _parserEntry,
+      [_uiReceivePort.sendPort, token],
+      // errors forwarded?
+    ).then((iso) => _parserIsolate = iso);
 
-    // 3) Hook websocket
+    // 3) Forward incoming socket data to isolate
     final router = AutoRouter.of(context);
-    widget.socket.listen((data) {
-      if (_isolateSendPort != null) {
-        _isolateSendPort!.send(data);
-      }
-    }, onDone: () {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) router.pop();
-      });
-    });
+    widget.socket.listen(
+          (data) {
+        if (_isolateSendPort != null) {
+          _isolateSendPort!.send(data);
+        }
+      },
+      onDone: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) router.pop();
+        });
+      },
+    );
   }
 
   void _handleIsolateMessage(dynamic msg) {
     if (msg is SendPort) {
-      // handshake from isolate
       _isolateSendPort = msg;
     } else if (msg is Map<String, dynamic>) {
       switch (msg['event']) {
@@ -102,7 +96,6 @@ class _TransferScreenState extends State<TransferScreen> {
           _addMessage('📥 ${msg['name']} received');
           break;
         case 'error':
-        // optional: log error
           debugPrint('Parser isolate error: ${msg['error']}');
           break;
       }
@@ -116,7 +109,9 @@ class _TransferScreenState extends State<TransferScreen> {
 
   void _addFile(String name, String path, bool sent) {
     if (!mounted) return;
-    setState(() => _files.add(_FileEntry(name: name, path: path, sent: sent, saved: sent)));
+    setState(() => _files.add(
+      FileEntry(name: name, path: path, sent: sent, saved: sent),
+    ));
   }
 
   @override
@@ -146,11 +141,17 @@ class _TransferScreenState extends State<TransferScreen> {
     final hdr = jsonEncode({'type': 'file', 'name': name, 'size': size});
     final hdrBytes = utf8.encode(hdr);
     final pre = ByteData(4)..setUint32(0, hdrBytes.length, Endian.big);
+
+    // header
     widget.socket.add(pre.buffer.asUint8List());
     widget.socket.add(Uint8List.fromList(hdrBytes));
+
+    // body
     await for (final chunk in f.openRead()) {
-      widget.socket.add(chunk is Uint8List ? chunk : Uint8List.fromList(chunk));
+      widget.socket.add(
+          chunk is Uint8List ? chunk : Uint8List.fromList(chunk));
     }
+
     _addFile(name, f.path, true);
     _addMessage('Me: Sent $name');
   }
@@ -198,23 +199,51 @@ class _TransferScreenState extends State<TransferScreen> {
     }
   }
 
-  Future<void> _download(_FileEntry e) async {
+  Future<void> _download(FileEntry e) async {
     if (e.saved) return;
-    final data = await File(e.path).readAsBytes();
+    final bytes = await File(e.path).readAsBytes();
     String dest = e.path;
-    if (Platform.isIOS && e.isImage) {
-      await Permission.photos.request();
-      final r = await ImageGallerySaver.saveImage(data, name: e.name);
-      if (r['filePath'] != null) dest = r['filePath'];
+
+    if (Platform.isMacOS) {
+      // Save As… via file_selector
+      final FileSaveLocation? loc = await getSaveLocation(
+        suggestedName: e.name,
+        acceptedTypeGroups: [XTypeGroup(label: 'All', extensions: ['*'])],
+      );
+      if (loc != null) {
+        final f = File(loc.path);
+        await f.writeAsBytes(bytes, flush: true);
+        dest = loc.path;
+      }
+    } else if (Platform.isIOS) {
+      if (e.isImage) {
+        await Permission.photos.request();
+        final r = await ImageGallerySaver.saveImage(bytes, name: e.name);
+        if (r['filePath'] != null) dest = r['filePath'];
+      } else {
+        final FileSaveLocation? loc = await getSaveLocation(
+          suggestedName: e.name,
+          acceptedTypeGroups: [XTypeGroup(label: 'All', extensions: ['*'])],
+        );
+        if (loc != null) {
+          final f = File(loc.path);
+          await f.writeAsBytes(bytes, flush: true);
+          dest = loc.path;
+        }
+      }
     } else if (Platform.isAndroid) {
       final dir = await DownloadsPathProvider.downloadsDirectory;
       if (dir != null) {
         final f = File('${dir.path}/${e.name}');
-        await f.writeAsBytes(data, flush: true);
+        await f.writeAsBytes(bytes, flush: true);
         dest = f.path;
       }
     }
-    if (mounted) setState(() => e.saved = true);
+
+    if (mounted) setState(() {
+      e.path = dest;
+      e.saved = true;
+    });
   }
 
   Widget _buildChatTab() => ListView.builder(
@@ -231,12 +260,17 @@ class _TransferScreenState extends State<TransferScreen> {
       final f = _files[i];
       return ListTile(
         leading: f.isImage
-            ? Image.file(
-            File(f.path), width: 48, height: 48, fit: BoxFit.cover)
-            : Icon(f.sent ? Icons.upload_file : Icons.insert_drive_file),
+            ? Image.file(File(f.path),
+            width: 48, height: 48, fit: BoxFit.cover)
+            : Icon(f.sent
+            ? Icons.upload_file
+            : Icons.insert_drive_file),
         title: Text(f.name, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-            f.sent ? 'sent' : f.saved ? 'received' : 'tap ↓ to save'),
+        subtitle: Text(f.sent
+            ? 'sent'
+            : f.saved
+            ? 'received'
+            : 'tap ↓ to save'),
         trailing: (!f.sent && !f.saved)
             ? IconButton(
           icon: const Icon(Icons.download),
@@ -280,27 +314,22 @@ class _TransferScreenState extends State<TransferScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.attach_file),
-            onPressed: _pickAndSend,
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _sendText,
-          ),
+              icon: const Icon(Icons.attach_file),
+              onPressed: _pickAndSend),
+          IconButton(icon: const Icon(Icons.send), onPressed: _sendText),
         ]),
       ),
     ),
   );
 }
 
-/// Entry point for the parser isolate.
-/// Uses length‐prefixed JSON headers + streaming binary bodies.
+/// Parser isolate entrypoint.
+/// Length-prefixed JSON headers + streaming binary bodies.
 Future<void> _parserEntry(List<dynamic> init) async {
-  // unpack arguments
   final SendPort uiSendPort = init[0] as SendPort;
-  final ui.RootIsolateToken rootToken = init[1] as ui.RootIsolateToken;
+  final ui.RootIsolateToken rootToken =
+  init[1] as ui.RootIsolateToken;
 
-  // initialize method‐channel messenger in this isolate
   BackgroundIsolateBinaryMessenger.ensureInitialized(rootToken);
 
   final rp = ReceivePort();
@@ -319,15 +348,13 @@ Future<void> _parserEntry(List<dynamic> init) async {
           : Uint8List.fromList((msg as List<int>));
       stash = Uint8List.fromList([...stash, ...chunk]);
 
-      // parsing loop
       while (true) {
-        // header length
         if (headerLen == null) {
           if (stash.length < 4) break;
-          headerLen = ByteData.sublistView(stash, 0, 4).getUint32(0, Endian.big);
+          headerLen =
+              ByteData.sublistView(stash, 0, 4).getUint32(0, Endian.big);
           stash = stash.sublist(4);
         }
-        // header JSON
         if (header == null) {
           if (stash.length < headerLen!) break;
           final jsonStr = utf8.decode(stash.sublist(0, headerLen!));
@@ -340,20 +367,14 @@ Future<void> _parserEntry(List<dynamic> init) async {
             fileSink = File(path).openWrite();
           }
         }
-        // text
         if (header!['type'] == 'text') {
-          uiSendPort.send({
-            'event': 'text',
-            'text': header!['text'],
-          });
+          uiSendPort.send({'event': 'text', 'text': header!['text']});
           header = null;
           headerLen = null;
           continue;
         }
-        // file
         if (header!['type'] == 'file') {
           if (fileSink == null) {
-            // drop malformed
             header = null;
             headerLen = null;
             bodyRemaining = null;
@@ -371,11 +392,7 @@ Future<void> _parserEntry(List<dynamic> init) async {
             final name = header!['name'] as String;
             final tmp = await getTemporaryDirectory();
             final path = '${tmp.path}/$name';
-            uiSendPort.send({
-              'event': 'file',
-              'name': name,
-              'path': path,
-            });
+            uiSendPort.send({'event': 'file', 'name': name, 'path': path});
             header = null;
             headerLen = null;
             bodyRemaining = null;
@@ -386,11 +403,7 @@ Future<void> _parserEntry(List<dynamic> init) async {
         break;
       }
     } catch (e) {
-      uiSendPort.send({
-        'event': 'error',
-        'error': e.toString(),
-      });
-      // reset state but keep stash
+      uiSendPort.send({'event': 'error', 'error': e.toString()});
       header = null;
       headerLen = null;
       bodyRemaining = null;

@@ -35,6 +35,8 @@ PODS:
   - file_picker (0.0.1):
     - DKImagePickerController/PhotoGallery
     - Flutter
+  - file_selector_ios (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - flutter_nsd (0.0.1):
     - Flutter
@@ -59,6 +61,7 @@ PODS:
 DEPENDENCIES:
   - downloads_path_provider_28 (from `.symlinks/plugins/downloads_path_provider_28/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
+  - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
   - flutter_nsd (from `.symlinks/plugins/flutter_nsd/ios`)
   - image_gallery_saver (from `.symlinks/plugins/image_gallery_saver/ios`)
@@ -80,6 +83,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/downloads_path_provider_28/ios"
   file_picker:
     :path: ".symlinks/plugins/file_picker/ios"
+  file_selector_ios:
+    :path: ".symlinks/plugins/file_selector_ios/ios"
   Flutter:
     :path: Flutter
   flutter_nsd:
@@ -102,6 +107,7 @@ SPEC CHECKSUMS:
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
   downloads_path_provider_28: c6b2480f4450e3f1e814d0e8b46bc737bf06a04f
   file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
+  file_selector_ios: f92e583d43608aebc2e4a18daac30b8902845502
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_nsd: e3c600b12e58b93ce1457bdf3ea5d5b900126d42
   image_gallery_saver: 14711d79da40581063e8842a11acf1969d781ed7

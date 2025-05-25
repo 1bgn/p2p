@@ -4,7 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
 import '../features/discovery_screen/presentation/ui/discovery_screen.dart';
-import '../features/transfer_screen/presentation/ui/transfer_sceren.dart';
+import '../features/transfer_screen/presentation/ui/transfer_screen.dart';
 
 
 
