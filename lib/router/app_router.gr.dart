@@ -31,15 +31,15 @@ class DiscoveryRoute extends PageRouteInfo<void> {
 class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
   TransferRoute({
     Key? key,
-    required WebSocket socket,
     required String remoteRoomCode,
+    required WebSocket socket,
     List<PageRouteInfo>? children,
   }) : super(
          TransferRoute.name,
          args: TransferRouteArgs(
            key: key,
-           socket: socket,
            remoteRoomCode: remoteRoomCode,
+           socket: socket,
          ),
          initialChildren: children,
        );
@@ -52,8 +52,8 @@ class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
       final args = data.argsAs<TransferRouteArgs>();
       return TransferScreen(
         key: args.key,
-        socket: args.socket,
         remoteRoomCode: args.remoteRoomCode,
+        socket: args.socket,
       );
     },
   );
@@ -62,18 +62,18 @@ class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
 class TransferRouteArgs {
   const TransferRouteArgs({
     this.key,
-    required this.socket,
     required this.remoteRoomCode,
+    required this.socket,
   });
 
   final Key? key;
 
-  final WebSocket socket;
-
   final String remoteRoomCode;
+
+  final WebSocket socket;
 
   @override
   String toString() {
-    return 'TransferRouteArgs{key: $key, socket: $socket, remoteRoomCode: $remoteRoomCode}';
+    return 'TransferRouteArgs{key: $key, remoteRoomCode: $remoteRoomCode, socket: $socket}';
   }
 }

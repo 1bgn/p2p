@@ -1,37 +1,54 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:injectable/injectable.dart';
 import 'package:signals_flutter/signals_core.dart';
 
+import '../../application/transfer_service.dart';
 import '../../domain/model/file_entry.dart';
-
+@LazySingleton()
 class TransferController {
-  final String roomCode;
-  final service = TransferService();
-  final messages = ReactiveList<String>();
-  final files = signal(List<FileEntry>.empty);
-  final text = signal(List<String>.empty);
+  final TransferService service;
+  StreamSubscription<TransferEvent>? _sub;
+  final messages = signal(List<String>.empty());
+  final files = signal(List<FileEntry>.empty());
+  final text = signal('');
 
-  TransferController(this.roomCode) {
-    service.connect(roomCode);
-    service.textStream.listen(_onTextReceived);
-    service.fileStream.listen(_onFileReceived);
+  TransferController(this.service);
+
+  void init(String roomCode, WebSocket socket) {
+    service.connect(roomCode, socket);
+    _sub = service.messageStream.listen(_handleEvent);
   }
+  Future<void> pickImages() => service.pickImages();
 
-  void _onTextReceived(String msg) {
-    messages.add('Remote: \$msg');
-  }
-
-  void _onFileReceived(FileEntry entry) {
-    files.add(entry);
-    messages.add('📥 \${entry.name} received');
+  Future<void> pickFiles() => service.pickFiles();
+  void _handleEvent(TransferEvent event) {
+    if (event is TextEvent) {
+      final ms = 'Remote: ${event.text}';
+      messages.value = [...messages.value, ms];
+    } else if (event is FileEvent) {
+      final ms = '📥 ${event.entry.name} received';
+      files.value = [...files.value, event.entry];
+      messages.value = [...messages.value, ms];
+    }
   }
 
   void sendText() {
     final t = text.value.trim();
     if (t.isEmpty) return;
     service.sendText(t);
-    messages.add('Me: \$t');
+    final ms = 'Me: $t';
+    messages.value = [...messages.value, ms];
     text.value = '';
   }
 
   Future<void> pickAndSend() => service.pickAndSend();
   Future<void> download(FileEntry entry) => service.download(entry);
+
+  /// Dispose controller and cancel subscriptions
+  void dispose() {
+    _sub?.cancel();
+    // Optionally shut down service if needed
+  }
 }

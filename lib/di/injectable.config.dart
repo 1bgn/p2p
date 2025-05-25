@@ -22,6 +22,10 @@ import 'package:beam_drop/features/discovery_screen/presentation/controller/conn
     as _i970;
 import 'package:beam_drop/features/discovery_screen/presentation/controller/discovery_controller.dart'
     as _i305;
+import 'package:beam_drop/features/transfer_screen/application/transfer_service.dart'
+    as _i187;
+import 'package:beam_drop/features/transfer_screen/presentation/controller/transfer_controller.dart'
+    as _i289;
 import 'package:beam_drop/router/app_router.dart' as _i413;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
@@ -35,6 +39,7 @@ extension GetItInjectableX on _i174.GetIt {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final injectableModule = _$InjectableModule();
     gh.lazySingleton<_i413.AppRouter>(() => injectableModule.appRouter);
+    gh.lazySingleton<_i187.TransferService>(() => _i187.TransferService());
     gh.lazySingleton<_i206.TcpServer>(() => _i206.TcpServer());
     gh.lazySingleton<_i203.WsServer>(() => _i203.WsServer());
     gh.lazySingleton<_i970.WsClient>(() => _i970.WsClient());
@@ -47,6 +52,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i970.WsClient>(),
         gh<_i203.WsServer>(),
       ),
+    );
+    gh.lazySingleton<_i289.TransferController>(
+      () => _i289.TransferController(gh<_i187.TransferService>()),
     );
     return this;
   }
