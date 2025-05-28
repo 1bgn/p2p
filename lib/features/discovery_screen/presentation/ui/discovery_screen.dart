@@ -1,4 +1,4 @@
-// lib/features/discovery_screen/presentation/ui/discovery_screen.dart
+import 'dart:io';
 import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
@@ -24,40 +24,35 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
   final _disc = getIt<DiscoveryController>();
 
-  late final String _myRoom;
   String _myIp = '0.0.0.0';
   bool _transferOpen = false;
+  DeviceInfo? _incomingDevice;
 
   @override
   void initState() {
     super.initState();
-    _myRoom = _genRoom();
     _boot();
   }
 
-  String _genRoom() =>
-      (100000 +
-          Random(DateTime.now().millisecondsSinceEpoch & 0xFFFF)
-              .nextInt(900000))
-          .toString();
-
   Future<void> _boot() async {
-    final ip= await NetworkInfo().getWifiIP();
+    final ip = await NetworkInfo().getWifiIP();
     _myIp = ip ?? '0.0.0.0';
-    setState(() {}); // отрисовать IP
+    setState(() {});
 
     await requestNecessaryPermissions();
 
-    final port = await _disc.startServer(); // запускаем WsServer
-    await _disc.start(_myRoom, port);       // UDP-discovery
+    final port = await _disc.startServer();
+    await _disc.start(Platform.localHostname, port);
 
-    // реагируем на изменение incoming (Signal<WebSocket?>)
     effect(() {
-      final ws = _disc.incoming.value;   // доступ к Signal → effect перезапустится
-      if (ws != null && !_transferOpen) {
+      final ws = _disc.incoming.value;
+      if (ws != null && !_transferOpen && _incomingDevice != null) {
         _transferOpen = true;
         context.router
-            .push(TransferRoute(socket: ws, remoteRoomCode: 'Unknown'))
+            .push(TransferRoute(
+          socket: ws,
+          deviceInfo: _incomingDevice!,
+        ))
             .then((_) => _transferOpen = false);
       }
     });
@@ -65,12 +60,29 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
 
   Future<void> _connect(DeviceInfo d) async {
     if (_transferOpen) return;
-    final ws = await _disc.connect(d);      // WebSocket
+    _incomingDevice = d;
+    final ws = await _disc.connect(d);
     if (!mounted) return;
     _transferOpen = true;
     context.router
-        .push(TransferRoute(socket: ws, remoteRoomCode: d.roomCode))
+        .push(TransferRoute(
+      socket: ws,
+      deviceInfo: d,
+    ))
         .then((_) => _transferOpen = false);
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'ПК':
+        return Icons.computer;
+      case 'Телефон':
+        return Icons.smartphone;
+      case 'Планшет':
+        return Icons.tablet;
+      default:
+        return Icons.devices_other;
+    }
   }
 
   @override
@@ -79,32 +91,41 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
     final devices = all.where((d) => d.ip != _myIp).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('P2P Discovery'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(20),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text('My IP $_myIp   Room $_myRoom',
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ),
-        ),
-      ),
-      body: ListView.separated(
-        itemCount: devices.length,
-        separatorBuilder: (_, __) => const Divider(),
-        itemBuilder: (_, i) {
-          final d = devices[i];
-          return ListTile(
-            leading: const Icon(Icons.computer),
-            title: Text('Room: ${d.roomCode}'),
-            subtitle: Text('${d.ip}:${d.tcpPort}'),
-            trailing: ElevatedButton(
-              onPressed: () => _connect(d),
-              child: const Text('Connect'),
+      // appBar: AppBar(title: const Text('P2P Discovery')),
+      body: Column(
+        children: [
+          SizedBox(height: 32,),
+          Image.asset("assets/logo.png",height: 200,),
+          Row(children: [Expanded(child: Text("BeamDrop",textAlign: TextAlign.center,style: TextStyle(fontSize: 32,fontWeight: FontWeight.w700),))],),
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(left: 24,right: 24,top: 24,bottom: 32),
+              decoration: BoxDecoration(border: Border.all(color: Colors.grey,),color: Colors.white,borderRadius: BorderRadius.all(Radius.circular(12))),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: devices.length,
+                // separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (_, i) {
+                  final d = devices[i];
+                  return GestureDetector(
+                    onTap: (){
+                      _connect(d);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey)),),
+                      child: ListTile(
+                        leading: Icon(_iconForType(d.deviceType)),
+                        title: Text(d.name),
+                        subtitle: Text('${d.ip}:${d.tcpPort}'),
+
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

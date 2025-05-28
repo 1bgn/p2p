@@ -31,14 +31,14 @@ class DiscoveryRoute extends PageRouteInfo<void> {
 class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
   TransferRoute({
     Key? key,
-    required String remoteRoomCode,
+    required DeviceInfo deviceInfo,
     required WebSocket socket,
     List<PageRouteInfo>? children,
   }) : super(
          TransferRoute.name,
          args: TransferRouteArgs(
            key: key,
-           remoteRoomCode: remoteRoomCode,
+           deviceInfo: deviceInfo,
            socket: socket,
          ),
          initialChildren: children,
@@ -52,7 +52,7 @@ class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
       final args = data.argsAs<TransferRouteArgs>();
       return TransferScreen(
         key: args.key,
-        remoteRoomCode: args.remoteRoomCode,
+        deviceInfo: args.deviceInfo,
         socket: args.socket,
       );
     },
@@ -62,18 +62,30 @@ class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
 class TransferRouteArgs {
   const TransferRouteArgs({
     this.key,
-    required this.remoteRoomCode,
+    required this.deviceInfo,
     required this.socket,
   });
 
   final Key? key;
 
-  final String remoteRoomCode;
+  final DeviceInfo deviceInfo;
 
   final WebSocket socket;
 
   @override
   String toString() {
-    return 'TransferRouteArgs{key: $key, remoteRoomCode: $remoteRoomCode, socket: $socket}';
+    return 'TransferRouteArgs{key: $key, deviceInfo: $deviceInfo, socket: $socket}';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TransferRouteArgs) return false;
+    return key == other.key &&
+        deviceInfo == other.deviceInfo &&
+        socket == other.socket;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ deviceInfo.hashCode ^ socket.hashCode;
 }

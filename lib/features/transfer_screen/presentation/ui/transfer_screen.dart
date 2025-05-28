@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:beam_drop/di/injectable.dart';
+import 'package:beam_drop/features/discovery_screen/domain/models/device_info.dart';
 import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/chat_tab.dart';
 import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/file_tab.dart';
 import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/input_bar.dart';
@@ -13,9 +14,9 @@ import '../controller/transfer_controller.dart';
 
 @RoutePage()
 class TransferScreen extends StatefulWidget {
-  final String remoteRoomCode;
+  final DeviceInfo deviceInfo;
   final WebSocket socket;
-   const TransferScreen({super.key, required this.remoteRoomCode, required this.socket});
+   const TransferScreen({super.key, required this.deviceInfo, required this.socket});
 
   @override
   State<TransferScreen> createState() => _TransferScreenState();
@@ -27,7 +28,7 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
   @override
   void initState() {
     super.initState();
-    controller.init(widget.remoteRoomCode, widget.socket);
+    controller.init(widget.deviceInfo.roomCode, widget.socket);
     effect((){
       if(controller.disconnected.value){
         AutoRouter.of(context).pop();
@@ -59,7 +60,7 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
             onPressed: controller.toggleAutoSave,
           ),
           ],
-              title: Text('Chat with ${widget.remoteRoomCode}'),
+              title: Text('Chat with ${widget.deviceInfo.name}'),
               bottom: const TabBar(tabs: [Tab(text: 'Chat'), Tab(text: 'Files')]),
             ),
 

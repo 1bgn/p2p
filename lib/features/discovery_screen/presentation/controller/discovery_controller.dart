@@ -17,10 +17,12 @@ class DiscoveryController {
   final discovered = Signal<List<DeviceInfo>>([]);
   final _cache = <String, DeviceInfo>{};
   static const _grace = Duration(seconds: 2);
+
   StreamSubscription? _udpSub, _nsdSub;
-    final WsClient client;
+  final WsClient client;
   final WsServer server;
-  DiscoveryController(this.client,this.server, this._udp);
+
+  DiscoveryController(this.client, this.server, this._udp);
 
   final incoming = signal<WebSocket?>(null);
 
@@ -30,7 +32,6 @@ class DiscoveryController {
     return port;
   }
 
-
   Future<WebSocket> connect(DeviceInfo d) =>
       client.connect(d.ip, d.tcpPort);
 
@@ -38,17 +39,28 @@ class DiscoveryController {
   static const _ttl = Duration(seconds: 5);
 
   Future<void> start(String room, int tcpPort) async {
+    // Запускаем альтернативный UDP-Discovery
     await _udp.start(room, tcpPort);
     _udpSub = _udp.stream.listen(_mergeList);
 
-    _nsdSub = _nsd.stream.listen((s) {
+    // Подписываемся на mDNS
+    _nsdSub = _nsd.stream.listen((s) async {
       if (s.hostname == null) return;
-      _merge(DeviceInfo(
-        roomCode: s.txt?['room']as String? ?? 'unknown',
+      // Получаем тип устройства так же, как и в UDP
+      final type = await _udp.getDeviceType();
+      // Имя может приходить в TXT, иначе — локальный hostname
+      final name = s.txt?['name'] as String? ?? Platform.localHostname;
+      final roomCode = s.txt?['room'] as String? ?? 'unknown';
+      final port = s.port ?? 0;
+      final dev = DeviceInfo(
+        name: name,
+        roomCode: roomCode,
         ip: s.hostname!,
-        tcpPort: s.port ?? 0,
+        tcpPort: port,
         lastSeen: DateTime.now(),
-      ));
+        deviceType: type,
+      );
+      _merge(dev);
     });
 
     await _nsd.discoverServices('_p2ptransfer._tcp.');
@@ -56,14 +68,7 @@ class DiscoveryController {
   }
 
   void _mergeList(List<DeviceInfo> list) => list.forEach(_merge);
-  void injectPeer(String room, String ip, int port) {
-    _merge(DeviceInfo(
-      roomCode: room,
-      ip: ip,
-      tcpPort: port,
-      lastSeen: DateTime.now(),
-    ));
-  }
+
   void _merge(DeviceInfo d) {
     _cache[d.ip] = d;
     _refresh();
@@ -72,7 +77,7 @@ class DiscoveryController {
   void _purge() {
     final now = DateTime.now();
     _cache.removeWhere(
-            (_, d) => now.difference(d.lastSeen) > _ttl + _grace
+          (_, d) => now.difference(d.lastSeen) > _ttl + _grace,
     );
     _refresh();
   }
@@ -85,7 +90,7 @@ class DiscoveryController {
     _ttlTimer?.cancel();
     _udp.stop();
     _nsd.stopDiscovery();
-     server.stop();
+    server.stop();
     incoming.dispose();
     discovered.dispose();
   }

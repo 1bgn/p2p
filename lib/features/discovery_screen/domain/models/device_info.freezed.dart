@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeviceInfo {
 
- String get roomCode; String get ip; int get tcpPort; DateTime get lastSeen;
+ String get roomCode; String get ip; String get name; int get tcpPort; DateTime get lastSeen; String get deviceType;
 /// Create a copy of DeviceInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $DeviceInfoCopyWith<DeviceInfo> get copyWith => _$DeviceInfoCopyWithImpl<DeviceI
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.name, name) || other.name == name)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.deviceType, deviceType) || other.deviceType == deviceType));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,roomCode,ip,tcpPort,lastSeen);
+int get hashCode => Object.hash(runtimeType,roomCode,ip,name,tcpPort,lastSeen,deviceType);
 
 @override
 String toString() {
-  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, tcpPort: $tcpPort, lastSeen: $lastSeen)';
+  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, name: $name, tcpPort: $tcpPort, lastSeen: $lastSeen, deviceType: $deviceType)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $DeviceInfoCopyWith<$Res>  {
   factory $DeviceInfoCopyWith(DeviceInfo value, $Res Function(DeviceInfo) _then) = _$DeviceInfoCopyWithImpl;
 @useResult
 $Res call({
- String roomCode, String ip, int tcpPort, DateTime lastSeen
+ String roomCode, String ip, String name, int tcpPort, DateTime lastSeen, String deviceType
 });
 
 
@@ -63,13 +63,15 @@ class _$DeviceInfoCopyWithImpl<$Res>
 
 /// Create a copy of DeviceInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? roomCode = null,Object? ip = null,Object? tcpPort = null,Object? lastSeen = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? roomCode = null,Object? ip = null,Object? name = null,Object? tcpPort = null,Object? lastSeen = null,Object? deviceType = null,}) {
   return _then(_self.copyWith(
 roomCode: null == roomCode ? _self.roomCode : roomCode // ignore: cast_nullable_to_non_nullable
 as String,ip: null == ip ? _self.ip : ip // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,tcpPort: null == tcpPort ? _self.tcpPort : tcpPort // ignore: cast_nullable_to_non_nullable
 as int,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,deviceType: null == deviceType ? _self.deviceType : deviceType // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -80,13 +82,15 @@ as DateTime,
 
 
 class _DeviceInfo implements DeviceInfo {
-  const _DeviceInfo({required this.roomCode, required this.ip, required this.tcpPort, required this.lastSeen});
+  const _DeviceInfo({required this.roomCode, required this.ip, required this.name, required this.tcpPort, required this.lastSeen, required this.deviceType});
   
 
 @override final  String roomCode;
 @override final  String ip;
+@override final  String name;
 @override final  int tcpPort;
 @override final  DateTime lastSeen;
+@override final  String deviceType;
 
 /// Create a copy of DeviceInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -98,16 +102,16 @@ _$DeviceInfoCopyWith<_DeviceInfo> get copyWith => __$DeviceInfoCopyWithImpl<_Dev
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.name, name) || other.name == name)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.deviceType, deviceType) || other.deviceType == deviceType));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,roomCode,ip,tcpPort,lastSeen);
+int get hashCode => Object.hash(runtimeType,roomCode,ip,name,tcpPort,lastSeen,deviceType);
 
 @override
 String toString() {
-  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, tcpPort: $tcpPort, lastSeen: $lastSeen)';
+  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, name: $name, tcpPort: $tcpPort, lastSeen: $lastSeen, deviceType: $deviceType)';
 }
 
 
@@ -118,7 +122,7 @@ abstract mixin class _$DeviceInfoCopyWith<$Res> implements $DeviceInfoCopyWith<$
   factory _$DeviceInfoCopyWith(_DeviceInfo value, $Res Function(_DeviceInfo) _then) = __$DeviceInfoCopyWithImpl;
 @override @useResult
 $Res call({
- String roomCode, String ip, int tcpPort, DateTime lastSeen
+ String roomCode, String ip, String name, int tcpPort, DateTime lastSeen, String deviceType
 });
 
 
@@ -135,13 +139,15 @@ class __$DeviceInfoCopyWithImpl<$Res>
 
 /// Create a copy of DeviceInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? roomCode = null,Object? ip = null,Object? tcpPort = null,Object? lastSeen = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? roomCode = null,Object? ip = null,Object? name = null,Object? tcpPort = null,Object? lastSeen = null,Object? deviceType = null,}) {
   return _then(_DeviceInfo(
 roomCode: null == roomCode ? _self.roomCode : roomCode // ignore: cast_nullable_to_non_nullable
 as String,ip: null == ip ? _self.ip : ip // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,tcpPort: null == tcpPort ? _self.tcpPort : tcpPort // ignore: cast_nullable_to_non_nullable
 as int,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,deviceType: null == deviceType ? _self.deviceType : deviceType // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
