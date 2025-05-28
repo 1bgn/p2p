@@ -18,6 +18,7 @@ dependencies:
   json_annotation: ^4.9.0
   network_info_plus: ^6.1.4
   file_selector: ^1.0.3
+  shared_preferences: ^2.5.3
   image_picker: ^1.1.2          # доступ к «Фото» (iOS и Android)
   # image_gallery_saver: ^2.0.3   # сохраняем картинки в Camera Roll (iOS)
   saver_gallery: ^4.0.1

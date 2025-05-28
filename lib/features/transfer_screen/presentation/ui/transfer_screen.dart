@@ -48,11 +48,21 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
         builder: (context,c) {
           final fls = watchSignal(context, controller.files);
           final msgs = watchSignal(context, controller.messages);
+          final autoSave = watchSignal(context, controller.autoSaveEnabled);
           return Scaffold(
+
             appBar: AppBar(
+              actions: [
+            IconButton(
+            icon: Text(autoSave ? "AS enabled" : "AS disabled"),
+            tooltip: 'Auto-save files',
+            onPressed: controller.toggleAutoSave,
+          ),
+          ],
               title: Text('Chat with ${widget.remoteRoomCode}'),
               bottom: const TabBar(tabs: [Tab(text: 'Chat'), Tab(text: 'Files')]),
             ),
+
             body: TabBarView(children: [
               ChatTab(controller: controller),
               FilesTab(controller: controller),
