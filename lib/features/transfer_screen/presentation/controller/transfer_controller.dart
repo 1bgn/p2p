@@ -52,6 +52,7 @@ class TransferController {
   /// Dispose controller and cancel subscriptions
   void dispose() {
     _sub?.cancel();
+    service.close();
     // Optionally shut down service if needed
   }
 }

@@ -19,42 +19,64 @@ import '../domain/model/file_entry.dart';
 abstract class TransferEvent {}
 class TextEvent extends TransferEvent { final String text; TextEvent(this.text); }
 class FileEvent extends TransferEvent { final FileEntry entry; FileEvent(this.entry); }
+
 @LazySingleton()
 class TransferService {
   late WebSocket _socket;
   final _eventCtrl = StreamController<TransferEvent>.broadcast();
   Stream<TransferEvent> get messageStream => _eventCtrl.stream;
 
-  late Isolate _parserIsolate;
-  late SendPort _parserSend;
-  final ReceivePort _receivePort = ReceivePort();
+  Isolate? _parserIsolate;
+  SendPort? _parserSend;
+  ReceivePort? _receivePort;
+
   Future<void> pickImages() async {
     final imgs = await ImagePicker().pickMultiImage();
     for (var img in imgs) {
       await sendFile(File(img.path));
     }
-    }
-
+  }
+  void close() {
+    _socket.close();
+    _receivePort?.close();
+    _parserIsolate?.kill(priority: Isolate.immediate);
+  }
   Future<void> pickFiles() async {
-    final res = await FilePicker.platform.pickFiles(allowMultiple:true);
+    final res = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (res != null) {
       for (var p in res.files) {
-        if (p.path!=null) await sendFile(File(p.path!));
+        if (p.path != null) await sendFile(File(p.path!));
       }
     }
   }
-  Future<void> connect(String roomCode,WebSocket socket) async {
-    final rootToken = RootIsolateToken.instance!;
-    _parserIsolate = await Isolate.spawn(parserEntry, [_receivePort.sendPort, rootToken]);
 
-    _receivePort.listen((msg) {
+  Future<void> connect(String roomCode, WebSocket socket) async {
+    // Clean up any previous parser isolate/port
+    _receivePort?.close();
+    _parserIsolate?.kill(priority: Isolate.immediate);
+
+    // Create a fresh ReceivePort and spawn a new parser isolate
+    _receivePort = ReceivePort();
+
+    final rootToken = RootIsolateToken.instance!;
+    _parserIsolate = await Isolate.spawn(
+      parserEntry,
+      [_receivePort!.sendPort, rootToken],
+    );
+
+    // Listen for parsed messages
+    _receivePort!.listen((msg) {
       if (msg is SendPort) {
         _parserSend = msg;
       } else if (msg is Map<String, dynamic>) {
         if (msg['type'] == 'text') {
           _eventCtrl.add(TextEvent(msg['text'] as String));
         } else if (msg['type'] == 'file') {
-          final entry = FileEntry(name: msg['name'] as String, path: msg['path'] as String, sent: false);
+          final entry = FileEntry(
+            name: msg['name'] as String,
+            path: msg['path'] as String,
+            sent: false,
+          );
           _eventCtrl.add(FileEvent(entry));
         }
       }
@@ -63,14 +85,14 @@ class TransferService {
     _socket = socket;
     _socket.listen((data) {
       final bytes = data is Uint8List ? data : Uint8List.fromList(data as List<int>);
-      _parserSend.send(bytes);
+      _parserSend?.send(bytes);
     }, onDone: _cleanup);
   }
 
   void _cleanup() {
     _socket.close();
-    _receivePort.close();
-    _parserIsolate.kill(priority: Isolate.immediate);
+    // Parser isolate will be cleaned up on next connect
+    _parserIsolate?.kill(priority: Isolate.immediate);
   }
 
   void sendText(String text) {
@@ -102,7 +124,7 @@ class TransferService {
       for (final img in imgs) {
         await sendFile(File(img.path));
       }
-          return;
+      return;
     }
     final res = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (res != null) {
@@ -113,11 +135,9 @@ class TransferService {
   }
 
   Future<void> download(FileEntry entry) async {
-    // if (entry.saved) return;
     final bytes = await File(entry.path).readAsBytes();
     String dest = entry.path;
 
-    // выделим расширение
     final parts = entry.name.split('.');
     final ext = parts.length > 1 ? parts.last : '';
 
@@ -130,33 +150,23 @@ class TransferService {
       );
       if (loc != null) {
         var savePath = loc.path;
-        if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
-          savePath += '.$ext';
-        }
+        if (ext.isNotEmpty && !savePath.endsWith('.$ext')) savePath += '.$ext';
         final file = File(savePath);
         await file.writeAsBytes(bytes, flush: true);
         dest = file.path;
       }
 
     } else if (Platform.isIOS) {
-      // запрос прав на запись в фото-библиотеку
       await Permission.photos.request();
-
       if (entry.isImage) {
-        // final res = await ImageGallerySaver.saveImage(bytes, name: entry.name);
         final res = await SaverGallery.saveImage(
-   bytes,
-    quality: 100,
-    fileName: entry.name,
-    androidRelativePath: "Pictures/BeamDrop/images",
-    skipIfExists: false,
-  );
-        // if (res['filePath'] != null) dest = res['filePath'];
-        if(res.isSuccess ){
-
-        }
+          bytes,
+          quality: 100,
+          fileName: entry.name,
+          androidRelativePath: "Pictures/BeamDrop/images",
+          skipIfExists: false,
+        );
       } else {
-        // для остальных файлов – сохраняем в «Файлы» через диалог
         final loc = await getSaveLocation(
           suggestedName: entry.name,
           acceptedTypeGroups: [
@@ -165,9 +175,7 @@ class TransferService {
         );
         if (loc != null) {
           var savePath = loc.path;
-          if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
-            savePath += '.$ext';
-          }
+          if (ext.isNotEmpty && !savePath.endsWith('.$ext')) savePath += '.$ext';
           final file = File(savePath);
           await file.writeAsBytes(bytes, flush: true);
           dest = file.path;
@@ -176,17 +184,14 @@ class TransferService {
 
     } else if (Platform.isAndroid) {
       if (entry.isImage) {
-        print("save on android");
-        // сохраняем в «Загрузки» (или можно сразу в галерею через ImageGallerySaver)
-         final res = await SaverGallery.saveImage(
-   bytes,
-    quality: 100,
-    fileName: entry.name,
-    androidRelativePath: "Pictures/BeamDrop/images",
-    skipIfExists: false,
-  );
+        final res = await SaverGallery.saveImage(
+          bytes,
+          quality: 100,
+          fileName: entry.name,
+          androidRelativePath: "Pictures/BeamDrop/images",
+          skipIfExists: false,
+        );
       } else {
-        // пусть пользователь выберет папку
         final directory = await FilePicker.platform.getDirectoryPath();
         if (directory != null) {
           final file = File('$directory/${entry.name}');
@@ -196,7 +201,6 @@ class TransferService {
       }
 
     } else {
-      // fallback: временный каталог
       final tmp = await getTemporaryDirectory();
       final file = File('${tmp.path}/${entry.name}');
       await file.writeAsBytes(bytes, flush: true);
@@ -270,4 +274,5 @@ Future<void> parserEntry(List<dynamic> args) async {
       break;
     }
   }
+
 }
