@@ -1,0 +1,1476 @@
+//== FILE: test/widget_test.dart ==//
+// This is a basic Flutter widget test.
+//
+// To perform an interaction with a widget in your test, use the WidgetTester
+// utility in the flutter_test package. For example, you can send tap and scroll
+// gestures. You can also use WidgetTester to find child widgets in the widget
+// tree, read text, and verify that the values of widget properties are correct.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:beam_drop/main.dart';
+
+void main() {
+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const MyApp());
+
+    // Verify that our counter starts at 0.
+    expect(find.text('0'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
+
+    // Tap the '+' icon and trigger a frame.
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
+
+    // Verify that our counter has incremented.
+    expect(find.text('0'), findsNothing);
+    expect(find.text('1'), findsOneWidget);
+  });
+}
+
+//== END FILE: test/widget_test.dart ==//
+
+//== FILE: pubspec.yaml ==//
+name: beam_drop
+description: "A new Flutter project."
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  permission_handler: ^12.0.0+1
+  file_picker: ^10.1.9
+  path_provider: ^2.1.5
+  json_annotation: ^4.9.0
+  network_info_plus: ^6.1.4
+  file_selector: ^1.0.3
+  image_picker: ^1.1.2          # доступ к «Фото» (iOS и Android)
+  # image_gallery_saver: ^2.0.3   # сохраняем картинки в Camera Roll (iOS)
+  saver_gallery: ^4.0.1
+#  downloads_path_provider_28: ^0.1.2
+  freezed_annotation: ^3.0.0
+  get_it: ^8.0.3
+  injectable: ^2.5.0
+  signals: ^6.0.2
+  signals_flutter: ^6.0.2
+  open_filex: ^4.7.0
+  flutter_nsd: ^1.6.0
+  auto_route: ^10.0.1
+  flutter_svg: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  freezed: ^3.0.6
+
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
+  json_serializable: any
+  auto_route_generator: ^10.0.1
+  injectable_generator: ^2.7.0
+
+
+flutter:
+  uses-material-design: true
+
+
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+
+
+//== END FILE: pubspec.yaml ==//
+
+//== FILE: lib/di/injectable.config.dart ==//
+// dart format width=80
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// **************************************************************************
+// InjectableConfigGenerator
+// **************************************************************************
+
+// ignore_for_file: type=lint
+// coverage:ignore-file
+
+// ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:beam_drop/di/injectable_module.dart' as _i965;
+import 'package:beam_drop/features/discovery_screen/application/discovery_service_udp.dart'
+    as _i517;
+import 'package:beam_drop/features/discovery_screen/application/ws_client.dart'
+    as _i970;
+import 'package:beam_drop/features/discovery_screen/application/ws_server.dart'
+    as _i203;
+import 'package:beam_drop/features/discovery_screen/presentation/controller/discovery_controller.dart'
+    as _i305;
+import 'package:beam_drop/features/transfer_screen/application/transfer_service.dart'
+    as _i187;
+import 'package:beam_drop/features/transfer_screen/presentation/controller/transfer_controller.dart'
+    as _i289;
+import 'package:beam_drop/router/app_router.dart' as _i413;
+import 'package:get_it/get_it.dart' as _i174;
+import 'package:injectable/injectable.dart' as _i526;
+
+extension GetItInjectableX on _i174.GetIt {
+  // initializes the registration of main-scope dependencies inside of GetIt
+  _i174.GetIt init({
+    String? environment,
+    _i526.EnvironmentFilter? environmentFilter,
+  }) {
+    final gh = _i526.GetItHelper(this, environment, environmentFilter);
+    final injectableModule = _$InjectableModule();
+    gh.lazySingleton<_i413.AppRouter>(() => injectableModule.appRouter);
+    gh.lazySingleton<_i187.TransferService>(() => _i187.TransferService());
+    gh.lazySingleton<_i517.DiscoveryServiceUdp>(
+      () => _i517.DiscoveryServiceUdp(),
+    );
+    gh.lazySingleton<_i203.WsServer>(() => _i203.WsServer());
+    gh.lazySingleton<_i970.WsClient>(() => _i970.WsClient());
+    gh.lazySingleton<_i305.DiscoveryController>(
+      () => _i305.DiscoveryController(
+        gh<_i970.WsClient>(),
+        gh<_i203.WsServer>(),
+        gh<_i517.DiscoveryServiceUdp>(),
+      ),
+    );
+    gh.lazySingleton<_i289.TransferController>(
+      () => _i289.TransferController(gh<_i187.TransferService>()),
+    );
+    return this;
+  }
+}
+
+class _$InjectableModule extends _i965.InjectableModule {}
+
+//== END FILE: lib/di/injectable.config.dart ==//
+
+//== FILE: lib/di/injectable.dart ==//
+import 'package:get_it/get_it.dart';
+import 'package:injectable/injectable.dart';
+import 'injectable.config.dart'; // будет сгенерирован автоматически
+
+final getIt = GetIt.instance;
+
+@injectableInit
+void configureDependencies() => getIt.init();
+//== END FILE: lib/di/injectable.dart ==//
+
+//== FILE: lib/di/injectable_module.dart ==//
+import 'package:beam_drop/router/app_router.dart';
+import 'package:injectable/injectable.dart';
+
+@module
+abstract class InjectableModule{
+  @lazySingleton
+  AppRouter get appRouter =>AppRouter();
+}
+//== END FILE: lib/di/injectable_module.dart ==//
+
+//== FILE: lib/features/transfer_screen/application/transfer_service.dart ==//
+import 'dart:async';
+import 'dart:isolate';
+import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:injectable/injectable.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_selector/file_selector.dart';
+// import 'package:image_gallery_saver/image_gallery_saver.dart';
+// import 'package:downloads_path_provider_28/downloads_path_provider_28.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:saver_gallery/saver_gallery.dart';
+import '../domain/model/file_entry.dart';
+
+/// Events emitted from parser isolate
+abstract class TransferEvent {}
+class TextEvent extends TransferEvent { final String text; TextEvent(this.text); }
+class FileEvent extends TransferEvent { final FileEntry entry; FileEvent(this.entry); }
+@LazySingleton()
+class TransferService {
+  late WebSocket _socket;
+  final _eventCtrl = StreamController<TransferEvent>.broadcast();
+  Stream<TransferEvent> get messageStream => _eventCtrl.stream;
+
+  late Isolate _parserIsolate;
+  late SendPort _parserSend;
+  final ReceivePort _receivePort = ReceivePort();
+  Future<void> pickImages() async {
+    final imgs = await ImagePicker().pickMultiImage();
+    for (var img in imgs) {
+      await sendFile(File(img.path));
+    }
+    }
+
+  Future<void> pickFiles() async {
+    final res = await FilePicker.platform.pickFiles(allowMultiple:true);
+    if (res != null) {
+      for (var p in res.files) {
+        if (p.path!=null) await sendFile(File(p.path!));
+      }
+    }
+  }
+  Future<void> connect(String roomCode,WebSocket socket) async {
+    final rootToken = RootIsolateToken.instance!;
+    _parserIsolate = await Isolate.spawn(parserEntry, [_receivePort.sendPort, rootToken]);
+
+    _receivePort.listen((msg) {
+      if (msg is SendPort) {
+        _parserSend = msg;
+      } else if (msg is Map<String, dynamic>) {
+        if (msg['type'] == 'text') {
+          _eventCtrl.add(TextEvent(msg['text'] as String));
+        } else if (msg['type'] == 'file') {
+          final entry = FileEntry(name: msg['name'] as String, path: msg['path'] as String, sent: false);
+          _eventCtrl.add(FileEvent(entry));
+        }
+      }
+    });
+
+    _socket = socket;
+    _socket.listen((data) {
+      final bytes = data is Uint8List ? data : Uint8List.fromList(data as List<int>);
+      _parserSend.send(bytes);
+    }, onDone: _cleanup);
+  }
+
+  void _cleanup() {
+    _socket.close();
+    _receivePort.close();
+    _parserIsolate.kill(priority: Isolate.immediate);
+  }
+
+  void sendText(String text) {
+    final header = jsonEncode({'type': 'text', 'text': text});
+    final hdrBytes = utf8.encode(header);
+    final pre = ByteData(4)..setUint32(0, hdrBytes.length, Endian.big);
+    _socket.add(pre.buffer.asUint8List());
+    _socket.add(Uint8List.fromList(hdrBytes));
+  }
+
+  Future<void> sendFile(File file) async {
+    final name = file.uri.pathSegments.last;
+    final size = await file.length();
+    final header = jsonEncode({'type': 'file', 'name': name, 'size': size});
+    final hdrBytes = utf8.encode(header);
+    final pre = ByteData(4)..setUint32(0, hdrBytes.length, Endian.big);
+    _socket.add(pre.buffer.asUint8List());
+    _socket.add(Uint8List.fromList(hdrBytes));
+    await for (final chunk in file.openRead()) {
+      final bytes = chunk is Uint8List ? chunk : Uint8List.fromList(chunk);
+      _socket.add(bytes);
+    }
+    _eventCtrl.add(FileEvent(FileEntry(name: name, path: file.path, sent: true)));
+  }
+
+  Future<void> pickAndSend() async {
+    if (Platform.isIOS) {
+      final imgs = await ImagePicker().pickMultiImage();
+      for (final img in imgs) {
+        await sendFile(File(img.path));
+      }
+          return;
+    }
+    final res = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (res != null) {
+      for (final p in res.files) {
+        if (p.path != null) await sendFile(File(p.path!));
+      }
+    }
+  }
+
+  Future<void> download(FileEntry entry) async {
+    // if (entry.saved) return;
+    final bytes = await File(entry.path).readAsBytes();
+    String dest = entry.path;
+
+    // выделим расширение
+    final parts = entry.name.split('.');
+    final ext = parts.length > 1 ? parts.last : '';
+
+    if (Platform.isMacOS) {
+      final loc = await getSaveLocation(
+        suggestedName: entry.name,
+        acceptedTypeGroups: [
+          XTypeGroup(label: 'All Files', extensions: ext.isNotEmpty ? [ext] : ['*'])
+        ],
+      );
+      if (loc != null) {
+        var savePath = loc.path;
+        if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
+          savePath += '.$ext';
+        }
+        final file = File(savePath);
+        await file.writeAsBytes(bytes, flush: true);
+        dest = file.path;
+      }
+
+    } else if (Platform.isIOS) {
+      // запрос прав на запись в фото-библиотеку
+      await Permission.photos.request();
+
+      if (entry.isImage) {
+        // final res = await ImageGallerySaver.saveImage(bytes, name: entry.name);
+        final res = await SaverGallery.saveImage(
+   bytes,
+    quality: 100,
+    fileName: entry.name,
+    androidRelativePath: "Pictures/BeamDrop/images",
+    skipIfExists: false,
+  );
+        // if (res['filePath'] != null) dest = res['filePath'];
+        if(res.isSuccess ){
+
+        }
+      } else {
+        // для остальных файлов – сохраняем в «Файлы» через диалог
+        final loc = await getSaveLocation(
+          suggestedName: entry.name,
+          acceptedTypeGroups: [
+            XTypeGroup(label: 'All Files', extensions: ext.isNotEmpty ? [ext] : ['*'])
+          ],
+        );
+        if (loc != null) {
+          var savePath = loc.path;
+          if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
+            savePath += '.$ext';
+          }
+          final file = File(savePath);
+          await file.writeAsBytes(bytes, flush: true);
+          dest = file.path;
+        }
+      }
+
+    } else if (Platform.isAndroid) {
+      if (entry.isImage) {
+        print("save on android");
+        // сохраняем в «Загрузки» (или можно сразу в галерею через ImageGallerySaver)
+         final res = await SaverGallery.saveImage(
+   bytes,
+    quality: 100,
+    fileName: entry.name,
+    androidRelativePath: "Pictures/BeamDrop/images",
+    skipIfExists: false,
+  );
+      } else {
+        // пусть пользователь выберет папку
+        final directory = await FilePicker.platform.getDirectoryPath();
+        if (directory != null) {
+          final file = File('$directory/${entry.name}');
+          await file.writeAsBytes(bytes, flush: true);
+          dest = file.path;
+        }
+      }
+
+    } else {
+      // fallback: временный каталог
+      final tmp = await getTemporaryDirectory();
+      final file = File('${tmp.path}/${entry.name}');
+      await file.writeAsBytes(bytes, flush: true);
+      dest = file.path;
+    }
+
+    entry.path = dest;
+    entry.saved = true;
+  }
+}
+
+
+Future<void> parserEntry(List<dynamic> args) async {
+  final SendPort uiPort = args[0] as SendPort;
+  final RootIsolateToken token = args[1] as RootIsolateToken;
+  BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+
+  final rp = ReceivePort();
+  uiPort.send(rp.sendPort);
+  Uint8List stash = Uint8List(0);
+  int? hLen;
+  Map<String, dynamic>? header;
+  int? remaining;
+  IOSink? sink;
+
+  await for (final msg in rp) {
+    final chunk = msg is Uint8List ? msg : Uint8List.fromList(msg as List<int>);
+    stash = Uint8List.fromList([...stash, ...chunk]);
+    while (true) {
+      if (hLen == null) {
+        if (stash.length < 4) break;
+        hLen = ByteData.sublistView(stash, 0, 4).getUint32(0, Endian.big);
+        stash = stash.sublist(4);
+      }
+      if (header == null) {
+        if (stash.length < hLen) break;
+        final str = utf8.decode(stash.sublist(0, hLen));
+        header = jsonDecode(str) as Map<String, dynamic>;
+        stash = stash.sublist(hLen);
+        if (header['type'] == 'file') {
+          remaining = header['size'] as int;
+          final tmp = await getTemporaryDirectory();
+          sink = File('${tmp.path}/${header['name']}').openWrite();
+        }
+      }
+      final type = header['type'] as String;
+      if (type == 'text') {
+        final text = header['text'] as String;
+        uiPort.send({'type': 'text', 'text': text});
+        header = null;
+        hLen = null;
+        continue;
+      }
+      if (type == 'file') {
+        if (stash.isEmpty) break;
+        final need = remaining!;
+        final take = need < stash.length ? need : stash.length;
+        sink!.add(stash.sublist(0, take));
+        stash = stash.sublist(take);
+        remaining = need - take;
+        if (remaining == 0) {
+          await sink.flush();
+          await sink.close();
+          final tmp = await getTemporaryDirectory();
+          uiPort.send({'type': 'file', 'name': header['name'], 'path': '${tmp.path}/${header['name']}'});
+          header = null;
+          hLen = null;
+          continue;
+        }
+      }
+      break;
+    }
+  }
+}
+
+//== END FILE: lib/features/transfer_screen/application/transfer_service.dart ==//
+
+//== FILE: lib/features/transfer_screen/domain/model/file_entry.dart ==//
+class FileEntry {
+  final String name;
+  String path;
+  final bool sent;
+  bool saved;
+
+  FileEntry({
+    required this.name,
+    required this.path,
+    required this.sent,
+    this.saved = false,
+  });
+
+  bool get isImage =>
+      RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(name.toLowerCase());
+}
+//== END FILE: lib/features/transfer_screen/domain/model/file_entry.dart ==//
+
+//== FILE: lib/features/transfer_screen/presentation/ui/widget/input_bar.dart ==//
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import '../../controller/transfer_controller.dart';
+
+class InputBar extends StatelessWidget {
+  final TransferController controller;
+  const InputBar({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Builder(
+                builder: (_) => TextField(
+                  controller: TextEditingController(text: controller.text.value),
+                  onChanged: (v) => controller.text.value = v,
+                  onSubmitted: (_) => controller.sendText(),
+                  decoration: const InputDecoration(labelText: 'Say something'),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.attach_file),
+              onPressed: () async {
+    if (Platform.isMacOS || Platform.isWindows) {
+    await controller.pickFiles();
+    }else {
+      final choice = await showModalBottomSheet<String>(
+        context: context,
+        builder: (_) =>
+            SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.photo_library),
+                    title: const Text('Gallery'),
+                    onTap: () => Navigator.pop(context, 'images'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.folder),
+                    title: const Text('Files'),
+                    onTap: () => Navigator.pop(context, 'files'),
+                  ),
+                ],
+              ),
+            ),
+      );
+
+      if (choice == 'images') {
+        await controller.pickImages();
+      } else if (choice == 'files') {
+        await controller.pickFiles();
+      }
+    }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: controller.sendText,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+//== END FILE: lib/features/transfer_screen/presentation/ui/widget/input_bar.dart ==//
+
+//== FILE: lib/features/transfer_screen/presentation/ui/widget/chat_tab.dart ==//
+import 'package:flutter/cupertino.dart';
+
+import '../../controller/transfer_controller.dart';
+
+class ChatTab extends StatelessWidget {
+  final TransferController controller;
+  const ChatTab({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: controller.messages.value.length,
+      itemBuilder: (_, i) => Text(controller.messages.value[i]),
+    );
+  }
+}
+
+//== END FILE: lib/features/transfer_screen/presentation/ui/widget/chat_tab.dart ==//
+
+//== FILE: lib/features/transfer_screen/presentation/ui/widget/file_tab.dart ==//
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
+import '../../controller/transfer_controller.dart';
+
+
+class FilesTab extends StatelessWidget {
+  final TransferController controller;
+  const FilesTab({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final fileList = controller.files.value;
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(8),
+      itemCount: fileList.length,
+      separatorBuilder: (_, __) => const Divider(),
+      itemBuilder: (_, i) {
+        final f = fileList[i];
+        return ListTile(
+          leading: f.isImage
+              ? Image.file(
+            File(f.path),
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+          )
+              : Icon(
+            f.sent ? Icons.upload_file : Icons.insert_drive_file,
+          ),
+          title: Text(
+            f.name,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            f.sent
+                ? 'sent'
+                : f.saved
+                ? 'received'
+                : 'not saved',
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: (){
+              controller.download(f);
+            },
+          ),
+          onTap: () {
+            if (f.isImage) {
+              showDialog(
+                context: context,
+                builder: (_) => Dialog(
+                  child: InteractiveViewer(
+                    child: Image.file(File(f.path)),
+                  ),
+                ),
+              );
+            } else {
+              OpenFilex.open(f.path);
+            }
+          },
+        );
+      },
+    );
+  }
+}
+//== END FILE: lib/features/transfer_screen/presentation/ui/widget/file_tab.dart ==//
+
+//== FILE: lib/features/transfer_screen/presentation/ui/transfer_screen.dart ==//
+import 'dart:io';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:beam_drop/di/injectable.dart';
+import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/chat_tab.dart';
+import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/file_tab.dart';
+import 'package:beam_drop/features/transfer_screen/presentation/ui/widget/input_bar.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:signals_flutter/signals_flutter.dart';
+
+import '../controller/transfer_controller.dart';
+
+@RoutePage()
+class TransferScreen extends StatefulWidget {
+  final String remoteRoomCode;
+  final WebSocket socket;
+   const TransferScreen({super.key, required this.remoteRoomCode, required this.socket});
+
+  @override
+  State<TransferScreen> createState() => _TransferScreenState();
+}
+
+class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
+  final controller = getIt<TransferController>();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.init(widget.remoteRoomCode, widget.socket);
+    effect((){
+      if(controller.disconnected.value){
+        AutoRouter.of(context).pop();
+      }
+    });
+  }
+  @override
+  void dispose() {
+    controller.dispose();
+    getIt.resetLazySingleton(instance: controller);
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: WatchBuilder(
+        builder: (context,c) {
+          final fls = watchSignal(context, controller.files);
+          final msgs = watchSignal(context, controller.messages);
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Chat with ${widget.remoteRoomCode}'),
+              bottom: const TabBar(tabs: [Tab(text: 'Chat'), Tab(text: 'Files')]),
+            ),
+            body: TabBarView(children: [
+              ChatTab(controller: controller),
+              FilesTab(controller: controller),
+            ]),
+            bottomNavigationBar: InputBar(controller: controller),
+          );
+        }
+      ),
+    );
+  }
+}
+//== END FILE: lib/features/transfer_screen/presentation/ui/transfer_screen.dart ==//
+
+//== FILE: lib/features/transfer_screen/presentation/controller/transfer_controller.dart ==//
+import 'dart:async';
+import 'dart:io';
+
+import 'package:injectable/injectable.dart';
+import 'package:signals_flutter/signals_core.dart';
+
+import '../../application/transfer_service.dart';
+import '../../domain/model/file_entry.dart';
+@LazySingleton()
+class TransferController {
+  final TransferService service;
+  StreamSubscription<TransferEvent>? _sub;
+  final messages = signal(List<String>.empty());
+  final files = signal(List<FileEntry>.empty());
+  final text = signal('');
+  final disconnected = signal(false);
+  TransferController(this.service);
+
+  void init(String roomCode, WebSocket socket) {
+    service.connect(roomCode, socket);
+    _sub = service.messageStream.listen(_handleEvent);
+    socket.done.then((_) {
+      disconnected.value = true;
+    });
+  }
+  Future<void> pickImages() => service.pickImages();
+
+  Future<void> pickFiles() => service.pickFiles();
+  void _handleEvent(TransferEvent event) {
+    if (event is TextEvent) {
+      final ms = 'Remote: ${event.text}';
+      messages.value = [...messages.value, ms];
+    } else if (event is FileEvent) {
+      final ms = '📥 ${event.entry.name} received';
+      files.value = [...files.value, event.entry];
+      messages.value = [...messages.value, ms];
+    }
+  }
+
+  void sendText() {
+    final t = text.value.trim();
+    if (t.isEmpty) return;
+    service.sendText(t);
+    final ms = 'Me: $t';
+    messages.value = [...messages.value, ms];
+    text.value = '';
+  }
+
+  Future<void> pickAndSend() => service.pickAndSend();
+  Future<void> download(FileEntry entry) => service.download(entry);
+
+  /// Dispose controller and cancel subscriptions
+  void dispose() {
+    _sub?.cancel();
+    // Optionally shut down service if needed
+  }
+}
+
+//== END FILE: lib/features/transfer_screen/presentation/controller/transfer_controller.dart ==//
+
+//== FILE: lib/features/discovery_screen/application/discovery_service_udp.dart ==//
+// lib/services/discovery_service_udp.dart
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:injectable/injectable.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+
+import '../domain/models/device_info.dart';
+
+const discoveryPort = 12345;
+const discoveryInterval = Duration(seconds: 1);
+
+/// Через сколько считать устройство “мертвым”
+ const _ttl = Duration(seconds: 5);
+
+@lazySingleton
+class DiscoveryServiceUdp {
+  final _ctrl = StreamController<List<DeviceInfo>>.broadcast();
+  Stream<List<DeviceInfo>> get stream => _ctrl.stream;
+
+  /// карту ключ→DeviceInfo теперь будем чистить по TTL
+  final _map = <String, DeviceInfo>{};
+
+  RawDatagramSocket? _recv, _send;
+  Timer? _broadcastTimer, _purgeTimer;
+  List<InternetAddress> _targets = [InternetAddress('255.255.255.255')];
+  static Future<List<InternetAddress>> _calcBroadcast() async {
+    if (kIsWeb) return [InternetAddress('255.255.255.255')];
+    final info = NetworkInfo();
+    final ip   = await info.getWifiIP();
+    final mask = await info.getWifiSubmask();
+    if (ip == null || mask == null) {
+      return [InternetAddress('255.255.255.255')];
+    }
+    final ipBytes   = ip.split('.').map(int.parse).toList();
+    final maskBytes = mask.split('.').map(int.parse).toList();
+    final bcBytes   = List<int>.generate(
+        4, (i) => ipBytes[i] | (255 ^ maskBytes[i])
+    );
+    return [InternetAddress(bcBytes.join('.'))];
+  }
+  Future<void> start(String room, int tcpPort) async {
+    _targets = await _calcBroadcast();
+
+    // Настраиваем приёмник
+    _recv = await RawDatagramSocket.bind(
+      InternetAddress.anyIPv4, discoveryPort,
+      reuseAddress: true, reusePort: true,
+    )..listen(_onRead);
+
+    // Настраиваем отправитель
+    _send = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0)
+      ..broadcastEnabled = true;
+
+    // Периодическая рассылка DISCOVER
+    _broadcastTimer = Timer.periodic(discoveryInterval,
+            (_) => _broadcast(room, tcpPort));
+
+    // И — очень важно — чистим _map чаще, чем TTL,
+    // чтобы удалять “мертвые” устройства
+    _purgeTimer = Timer.periodic(Duration(seconds: 1), (_) => _purge());
+
+    debugPrint('[UDP] started. Targets: $_targets');
+  }
+
+  void _broadcast(String room, int port) {
+    final msg = 'DISCOVER:$room:$port';
+    for (final t in _targets) {
+      _send!.send(utf8.encode(msg), t, discoveryPort);
+    }
+    debugPrint('[UDP] send → $msg');
+  }
+
+  void _onRead(RawSocketEvent e) {
+    final dg = _recv!.receive();
+    if (dg == null) return;
+    final text = utf8.decode(dg.data);
+    debugPrint('[UDP] recv ← $text');
+    if (!text.startsWith('DISCOVER:')) return;
+
+    final parts = text.split(':');
+    if (parts.length < 3) return;
+
+    final key = '${dg.address.address}:${parts[1]}';
+    final dev = DeviceInfo(
+      roomCode: parts[1],
+      ip: dg.address.address,
+      tcpPort: int.tryParse(parts[2]) ?? 0,
+      lastSeen: DateTime.now(),
+    );
+    _map[key] = dev;
+
+    // сразу отдаём клиенту свежий список
+    _ctrl.add(_map.values.toList());
+  }
+
+  /// удаляем все записи, у которых lastSeen устарел сильнее, чем _ttl
+  void _purge() {
+    final now = DateTime.now();
+    final removed = _map.keys
+        .where((k) => now.difference(_map[k]!.lastSeen) > _ttl)
+        .toList();
+    if (removed.isNotEmpty) {
+      for (final k in removed) {
+        _map.remove(k);
+        debugPrint('[UDP] purged → $k');
+      }
+      // и снова отдадим обновлённый список
+      _ctrl.add(_map.values.toList());
+    }
+  }
+
+  Future<void> stop() async {
+    _broadcastTimer?.cancel();
+    _purgeTimer?.cancel();
+    _send?.close();
+    _recv?.close();
+    _map.clear();
+  }
+}
+
+//== END FILE: lib/features/discovery_screen/application/discovery_service_udp.dart ==//
+
+//== FILE: lib/features/discovery_screen/application/ws_server.dart ==//
+// lib/features/discovery_screen/application/ws_server.dart
+import 'dart:async';
+import 'dart:io';
+import 'package:injectable/injectable.dart';
+
+@LazySingleton()
+class WsServer {
+  final _ctrl = StreamController<WebSocket>.broadcast();
+  Stream<WebSocket> get stream => _ctrl.stream;
+
+  late HttpServer _http;
+
+  Future<int> start({int preferredPort = 0}) async {
+    _http = await HttpServer.bind(InternetAddress.anyIPv4, preferredPort);
+    _http.listen((req) async {
+      if (WebSocketTransformer.isUpgradeRequest(req)) {
+        final ws = await WebSocketTransformer.upgrade(req);
+        _ctrl.add(ws);
+      } else {
+        req.response..statusCode = HttpStatus.badRequest..close();
+      }
+    });
+    return _http.port;
+  }
+
+  Future<void> stop() async => _http.close(force: true);
+}
+
+//== END FILE: lib/features/discovery_screen/application/ws_server.dart ==//
+
+//== FILE: lib/features/discovery_screen/application/ws_client.dart ==//
+// lib/features/discovery_screen/application/ws_client.dart
+import 'dart:io';
+import 'package:injectable/injectable.dart';
+
+@LazySingleton()
+class WsClient {
+  Future<WebSocket> connect(String ip, int port) =>
+      WebSocket.connect('ws://$ip:$port');
+}
+
+//== END FILE: lib/features/discovery_screen/application/ws_client.dart ==//
+
+//== FILE: lib/features/discovery_screen/domain/models/device_info.dart ==//
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'device_info.freezed.dart';
+
+@freezed
+abstract class DeviceInfo  with _$DeviceInfo{
+  const factory DeviceInfo({
+   required final String roomCode,
+   required  final String ip,
+   required final int tcpPort,
+   required  final DateTime lastSeen,
+}) = _DeviceInfo;
+}
+//== END FILE: lib/features/discovery_screen/domain/models/device_info.dart ==//
+
+//== FILE: lib/features/discovery_screen/domain/models/device_info.freezed.dart ==//
+// dart format width=80
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
+
+part of 'device_info.dart';
+
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
+
+// dart format off
+T _$identity<T>(T value) => value;
+/// @nodoc
+mixin _$DeviceInfo {
+
+ String get roomCode; String get ip; int get tcpPort; DateTime get lastSeen;
+/// Create a copy of DeviceInfo
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DeviceInfoCopyWith<DeviceInfo> get copyWith => _$DeviceInfoCopyWithImpl<DeviceInfo>(this as DeviceInfo, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,roomCode,ip,tcpPort,lastSeen);
+
+@override
+String toString() {
+  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, tcpPort: $tcpPort, lastSeen: $lastSeen)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DeviceInfoCopyWith<$Res>  {
+  factory $DeviceInfoCopyWith(DeviceInfo value, $Res Function(DeviceInfo) _then) = _$DeviceInfoCopyWithImpl;
+@useResult
+$Res call({
+ String roomCode, String ip, int tcpPort, DateTime lastSeen
+});
+
+
+
+
+}
+/// @nodoc
+class _$DeviceInfoCopyWithImpl<$Res>
+    implements $DeviceInfoCopyWith<$Res> {
+  _$DeviceInfoCopyWithImpl(this._self, this._then);
+
+  final DeviceInfo _self;
+  final $Res Function(DeviceInfo) _then;
+
+/// Create a copy of DeviceInfo
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? roomCode = null,Object? ip = null,Object? tcpPort = null,Object? lastSeen = null,}) {
+  return _then(_self.copyWith(
+roomCode: null == roomCode ? _self.roomCode : roomCode // ignore: cast_nullable_to_non_nullable
+as String,ip: null == ip ? _self.ip : ip // ignore: cast_nullable_to_non_nullable
+as String,tcpPort: null == tcpPort ? _self.tcpPort : tcpPort // ignore: cast_nullable_to_non_nullable
+as int,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+}
+
+
+/// @nodoc
+
+
+class _DeviceInfo implements DeviceInfo {
+  const _DeviceInfo({required this.roomCode, required this.ip, required this.tcpPort, required this.lastSeen});
+  
+
+@override final  String roomCode;
+@override final  String ip;
+@override final  int tcpPort;
+@override final  DateTime lastSeen;
+
+/// Create a copy of DeviceInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DeviceInfoCopyWith<_DeviceInfo> get copyWith => __$DeviceInfoCopyWithImpl<_DeviceInfo>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DeviceInfo&&(identical(other.roomCode, roomCode) || other.roomCode == roomCode)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.tcpPort, tcpPort) || other.tcpPort == tcpPort)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,roomCode,ip,tcpPort,lastSeen);
+
+@override
+String toString() {
+  return 'DeviceInfo(roomCode: $roomCode, ip: $ip, tcpPort: $tcpPort, lastSeen: $lastSeen)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DeviceInfoCopyWith<$Res> implements $DeviceInfoCopyWith<$Res> {
+  factory _$DeviceInfoCopyWith(_DeviceInfo value, $Res Function(_DeviceInfo) _then) = __$DeviceInfoCopyWithImpl;
+@override @useResult
+$Res call({
+ String roomCode, String ip, int tcpPort, DateTime lastSeen
+});
+
+
+
+
+}
+/// @nodoc
+class __$DeviceInfoCopyWithImpl<$Res>
+    implements _$DeviceInfoCopyWith<$Res> {
+  __$DeviceInfoCopyWithImpl(this._self, this._then);
+
+  final _DeviceInfo _self;
+  final $Res Function(_DeviceInfo) _then;
+
+/// Create a copy of DeviceInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? roomCode = null,Object? ip = null,Object? tcpPort = null,Object? lastSeen = null,}) {
+  return _then(_DeviceInfo(
+roomCode: null == roomCode ? _self.roomCode : roomCode // ignore: cast_nullable_to_non_nullable
+as String,ip: null == ip ? _self.ip : ip // ignore: cast_nullable_to_non_nullable
+as String,tcpPort: null == tcpPort ? _self.tcpPort : tcpPort // ignore: cast_nullable_to_non_nullable
+as int,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+
+}
+
+// dart format on
+
+//== END FILE: lib/features/discovery_screen/domain/models/device_info.freezed.dart ==//
+
+//== FILE: lib/features/discovery_screen/presentation/ui/discovery_screen.dart ==//
+// lib/features/discovery_screen/presentation/ui/discovery_screen.dart
+import 'dart:math';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/material.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:signals_flutter/signals_flutter.dart';
+
+import '../../../../di/injectable.dart';
+import '../../../../router/app_router.dart';
+
+import '../../../../utils/permissions.dart';
+import '../../domain/models/device_info.dart';
+import '../controller/discovery_controller.dart';
+
+@RoutePage()
+class DiscoveryScreen extends StatefulWidget {
+  const DiscoveryScreen({super.key});
+
+  @override
+  State<DiscoveryScreen> createState() => _DiscoveryScreenState();
+}
+
+class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
+  final _disc = getIt<DiscoveryController>();
+
+  late final String _myRoom;
+  String _myIp = '0.0.0.0';
+  bool _transferOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _myRoom = _genRoom();
+    _boot();
+  }
+
+  String _genRoom() =>
+      (100000 +
+          Random(DateTime.now().millisecondsSinceEpoch & 0xFFFF)
+              .nextInt(900000))
+          .toString();
+
+  Future<void> _boot() async {
+    final ip= await NetworkInfo().getWifiIP();
+    _myIp = ip ?? '0.0.0.0';
+    setState(() {}); // отрисовать IP
+
+    await requestNecessaryPermissions();
+
+    final port = await _disc.startServer(); // запускаем WsServer
+    await _disc.start(_myRoom, port);       // UDP-discovery
+
+    // реагируем на изменение incoming (Signal<WebSocket?>)
+    effect(() {
+      final ws = _disc.incoming.value;   // доступ к Signal → effect перезапустится
+      if (ws != null && !_transferOpen) {
+        _transferOpen = true;
+        context.router
+            .push(TransferRoute(socket: ws, remoteRoomCode: 'Unknown'))
+            .then((_) => _transferOpen = false);
+      }
+    });
+  }
+
+  Future<void> _connect(DeviceInfo d) async {
+    if (_transferOpen) return;
+    final ws = await _disc.connect(d);      // WebSocket
+    if (!mounted) return;
+    _transferOpen = true;
+    context.router
+        .push(TransferRoute(socket: ws, remoteRoomCode: d.roomCode))
+        .then((_) => _transferOpen = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final all = watchSignal(context, _disc.discovered);
+    final devices = all.where((d) => d.ip != _myIp).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('P2P Discovery'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('My IP $_myIp   Room $_myRoom',
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          ),
+        ),
+      ),
+      body: ListView.separated(
+        itemCount: devices.length,
+        separatorBuilder: (_, __) => const Divider(),
+        itemBuilder: (_, i) {
+          final d = devices[i];
+          return ListTile(
+            leading: const Icon(Icons.computer),
+            title: Text('Room: ${d.roomCode}'),
+            subtitle: Text('${d.ip}:${d.tcpPort}'),
+            trailing: ElevatedButton(
+              onPressed: () => _connect(d),
+              child: const Text('Connect'),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _disc.dispose();
+    super.dispose();
+  }
+}
+
+//== END FILE: lib/features/discovery_screen/presentation/ui/discovery_screen.dart ==//
+
+//== FILE: lib/features/discovery_screen/presentation/controller/discovery_controller.dart ==//
+import 'dart:async';
+import 'dart:io';
+import 'package:beam_drop/features/discovery_screen/application/ws_client.dart';
+import 'package:beam_drop/features/discovery_screen/application/ws_server.dart';
+import 'package:injectable/injectable.dart';
+import 'package:flutter_nsd/flutter_nsd.dart';
+import 'package:signals_core/signals_core.dart';
+import '../../application/discovery_service_udp.dart';
+import '../../domain/models/device_info.dart';
+
+
+@LazySingleton()
+class DiscoveryController {
+  final DiscoveryServiceUdp _udp;
+  final _nsd = FlutterNsd();
+
+  final discovered = Signal<List<DeviceInfo>>([]);
+  final _cache = <String, DeviceInfo>{};
+  static const _grace = Duration(seconds: 2);
+  StreamSubscription? _udpSub, _nsdSub;
+    final WsClient client;
+  final WsServer server;
+  DiscoveryController(this.client,this.server, this._udp);
+
+  final incoming = signal<WebSocket?>(null);
+
+  Future<int> startServer() async {
+    final port = await server.start(preferredPort: 0);
+    server.stream.listen((ws) => incoming.value = ws);
+    return port;
+  }
+
+
+  Future<WebSocket> connect(DeviceInfo d) =>
+      client.connect(d.ip, d.tcpPort);
+
+  Timer? _ttlTimer;
+  static const _ttl = Duration(seconds: 5);
+
+  Future<void> start(String room, int tcpPort) async {
+    await _udp.start(room, tcpPort);
+    _udpSub = _udp.stream.listen(_mergeList);
+
+    _nsdSub = _nsd.stream.listen((s) {
+      if (s.hostname == null) return;
+      _merge(DeviceInfo(
+        roomCode: s.txt?['room']as String? ?? 'unknown',
+        ip: s.hostname!,
+        tcpPort: s.port ?? 0,
+        lastSeen: DateTime.now(),
+      ));
+    });
+
+    await _nsd.discoverServices('_p2ptransfer._tcp.');
+    _ttlTimer = Timer.periodic(const Duration(seconds: 5), (_) => _purge());
+  }
+
+  void _mergeList(List<DeviceInfo> list) => list.forEach(_merge);
+  void injectPeer(String room, String ip, int port) {
+    _merge(DeviceInfo(
+      roomCode: room,
+      ip: ip,
+      tcpPort: port,
+      lastSeen: DateTime.now(),
+    ));
+  }
+  void _merge(DeviceInfo d) {
+    _cache[d.ip] = d;
+    _refresh();
+  }
+
+  void _purge() {
+    final now = DateTime.now();
+    _cache.removeWhere(
+            (_, d) => now.difference(d.lastSeen) > _ttl + _grace
+    );
+    _refresh();
+  }
+
+  void _refresh() => discovered.value = _cache.values.toList();
+
+  void dispose() {
+    _udpSub?.cancel();
+    _nsdSub?.cancel();
+    _ttlTimer?.cancel();
+    _udp.stop();
+    _nsd.stopDiscovery();
+     server.stop();
+    incoming.dispose();
+    discovered.dispose();
+  }
+}
+
+//== END FILE: lib/features/discovery_screen/presentation/controller/discovery_controller.dart ==//
+
+//== FILE: lib/utils/permissions.dart ==//
+import 'dart:io';
+
+import 'package:permission_handler/permission_handler.dart';
+
+Future<void> requestNecessaryPermissions() async {
+ if(Platform.isAndroid){
+   await [
+     Permission.storage,
+     Permission.nearbyWifiDevices, // Android 13+
+   ].request();
+ }
+}
+//== END FILE: lib/utils/permissions.dart ==//
+
+//== FILE: lib/main.dart ==//
+import 'package:beam_drop/di/injectable.dart';
+import 'package:beam_drop/router/app_router.dart';
+import 'package:flutter/material.dart';
+
+
+void main() {
+  configureDependencies();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: getIt<AppRouter>().config(),
+    );
+  }
+}
+
+//== END FILE: lib/main.dart ==//
+
+//== FILE: lib/router/app_router.gr.dart ==//
+// dart format width=80
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// **************************************************************************
+// AutoRouterGenerator
+// **************************************************************************
+
+// ignore_for_file: type=lint
+// coverage:ignore-file
+
+part of 'app_router.dart';
+
+/// generated route for
+/// [DiscoveryScreen]
+class DiscoveryRoute extends PageRouteInfo<void> {
+  const DiscoveryRoute({List<PageRouteInfo>? children})
+    : super(DiscoveryRoute.name, initialChildren: children);
+
+  static const String name = 'DiscoveryRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const DiscoveryScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [TransferScreen]
+class TransferRoute extends PageRouteInfo<TransferRouteArgs> {
+  TransferRoute({
+    Key? key,
+    required String remoteRoomCode,
+    required WebSocket socket,
+    List<PageRouteInfo>? children,
+  }) : super(
+         TransferRoute.name,
+         args: TransferRouteArgs(
+           key: key,
+           remoteRoomCode: remoteRoomCode,
+           socket: socket,
+         ),
+         initialChildren: children,
+       );
+
+  static const String name = 'TransferRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<TransferRouteArgs>();
+      return TransferScreen(
+        key: args.key,
+        remoteRoomCode: args.remoteRoomCode,
+        socket: args.socket,
+      );
+    },
+  );
+}
+
+class TransferRouteArgs {
+  const TransferRouteArgs({
+    this.key,
+    required this.remoteRoomCode,
+    required this.socket,
+  });
+
+  final Key? key;
+
+  final String remoteRoomCode;
+
+  final WebSocket socket;
+
+  @override
+  String toString() {
+    return 'TransferRouteArgs{key: $key, remoteRoomCode: $remoteRoomCode, socket: $socket}';
+  }
+}
+
+//== END FILE: lib/router/app_router.gr.dart ==//
+
+//== FILE: lib/router/app_router.dart ==//
+import 'dart:io';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/material.dart';
+
+import '../features/discovery_screen/presentation/ui/discovery_screen.dart';
+import '../features/transfer_screen/presentation/ui/transfer_screen.dart';
+
+
+
+
+part 'app_router.gr.dart';
+
+@AutoRouterConfig(replaceInRouteName: 'Screen|Page,Route')
+class AppRouter extends RootStackRouter {
+  @override
+  List<AutoRoute> get routes => [
+    // AutoRoute(page: LoginRoute.page, initial: true),
+    // AutoRoute(page: HomeRoute.page),
+    // AutoRoute(page: ProfileRoute.page),
+    AutoRoute(page: DiscoveryRoute.page,initial: true),
+    AutoRoute(page: TransferRoute.page),
+  ];
+}
+
+//== END FILE: lib/router/app_router.dart ==//
+
