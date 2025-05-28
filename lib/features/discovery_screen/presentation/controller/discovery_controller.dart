@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:beam_drop/features/discovery_screen/application/ws_client.dart';
+import 'package:beam_drop/features/discovery_screen/application/ws_server.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:signals_core/signals_core.dart';
@@ -8,13 +11,29 @@ import '../../domain/models/device_info.dart';
 
 @LazySingleton()
 class DiscoveryController {
-  final _udp = DiscoveryServiceUdp.instance;
+  final DiscoveryServiceUdp _udp;
   final _nsd = FlutterNsd();
 
   final discovered = Signal<List<DeviceInfo>>([]);
   final _cache = <String, DeviceInfo>{};
   static const _grace = Duration(seconds: 2);
   StreamSubscription? _udpSub, _nsdSub;
+    final WsClient client;
+  final WsServer server;
+  DiscoveryController(this.client,this.server, this._udp);
+
+  final incoming = signal<WebSocket?>(null);
+
+  Future<int> startServer() async {
+    final port = await server.start(preferredPort: 0);
+    server.stream.listen((ws) => incoming.value = ws);
+    return port;
+  }
+
+
+  Future<WebSocket> connect(DeviceInfo d) =>
+      client.connect(d.ip, d.tcpPort);
+
   Timer? _ttlTimer;
   static const _ttl = Duration(seconds: 5);
 
@@ -66,6 +85,8 @@ class DiscoveryController {
     _ttlTimer?.cancel();
     _udp.stop();
     _nsd.stopDiscovery();
+     server.stop();
+    incoming.dispose();
     discovered.dispose();
   }
 }

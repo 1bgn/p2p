@@ -3,8 +3,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:injectable/injectable.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:collection/collection.dart';
 
 import '../domain/models/device_info.dart';
 
@@ -27,10 +27,10 @@ Future<List<InternetAddress>> _calcBroadcast() async {
   final bcBytes   = List<int>.generate(4, (i) => ipBytes[i] | (255 ^ maskBytes[i]));
   return [InternetAddress(bcBytes.join('.'))];
 }
-
+@lazySingleton
 class DiscoveryServiceUdp {
-  DiscoveryServiceUdp._();
-  static final instance = DiscoveryServiceUdp._();
+  // DiscoveryServiceUdp._();
+  // static final instance = DiscoveryServiceUdp._();
 
   final _ctrl = StreamController<List<DeviceInfo>>.broadcast();
   Stream<List<DeviceInfo>> get stream => _ctrl.stream;

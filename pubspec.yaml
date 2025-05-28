@@ -20,7 +20,7 @@ dependencies:
   file_selector: ^1.0.3
   image_picker: ^1.1.2          # доступ к «Фото» (iOS и Android)
   image_gallery_saver: ^2.0.3   # сохраняем картинки в Camera Roll (iOS)
-  downloads_path_provider_28: ^0.1.2
+#  downloads_path_provider_28: ^0.1.2
   freezed_annotation: ^3.0.0
   get_it: ^8.0.3
   injectable: ^2.5.0

@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
 <key>NSPhotoLibraryAddUsageDescription</key>
+<string>Приложению нужен доступ, чтобы сохранять изображения</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
 <string>Need to save received images to your Photos</string>
 <key>NSPhotoLibraryUsageDescription</key>
 <string>Need access to pick images from gallery</string>

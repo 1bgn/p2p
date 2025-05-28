@@ -31,6 +31,7 @@
 /// ```bash
 /// dart pub global activate melos
 /// ```
+library;
 import 'dart:io';
 import 'dart:convert';
 
@@ -68,7 +69,7 @@ Future<void> main(List<String> args) async {
 
   final visited = <String>{};
 
-  bool _isPubspecYaml(String p) => p.endsWith('pubspec.yaml');
+  bool isPubspecYaml(String p) => p.endsWith('pubspec.yaml');
 
   for (final dir in scanDirs) {
     await for (final entity in dir.list(recursive: true, followLinks: false)) {
@@ -78,7 +79,7 @@ Future<void> main(List<String> args) async {
       if (segments.any(ignoreDirs.contains)) continue;
 
       final isDart = path.endsWith('.dart');
-      final isPubspec = _isPubspecYaml(path);
+      final isPubspec = isPubspecYaml(path);
 
       if (!(isDart || isPubspec)) continue;
       if (isDart && File(path).absolute.path == selfPath) continue; // skip self

@@ -11,7 +11,6 @@ import '../../../../router/app_router.dart';
 
 import '../../../../utils/permissions.dart';
 import '../../domain/models/device_info.dart';
-import '../controller/connection_controller.dart';
 import '../controller/discovery_controller.dart';
 
 @RoutePage()
@@ -23,7 +22,6 @@ class DiscoveryScreen extends StatefulWidget {
 }
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
-  final _conn = getIt<ConnectionController>();
   final _disc = getIt<DiscoveryController>();
 
   late final String _myRoom;
@@ -50,12 +48,12 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
 
     await requestNecessaryPermissions();
 
-    final port = await _conn.startServer(); // запускаем WsServer
+    final port = await _disc.startServer(); // запускаем WsServer
     await _disc.start(_myRoom, port);       // UDP-discovery
 
     // реагируем на изменение incoming (Signal<WebSocket?>)
     effect(() {
-      final ws = _conn.incoming.value;   // доступ к Signal → effect перезапустится
+      final ws = _disc.incoming.value;   // доступ к Signal → effect перезапустится
       if (ws != null && !_transferOpen) {
         _transferOpen = true;
         context.router
@@ -67,7 +65,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
 
   Future<void> _connect(DeviceInfo d) async {
     if (_transferOpen) return;
-    final ws = await _conn.connect(d);      // WebSocket
+    final ws = await _disc.connect(d);      // WebSocket
     if (!mounted) return;
     _transferOpen = true;
     context.router
@@ -114,7 +112,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
   @override
   void dispose() {
     _disc.dispose();
-    _conn.dispose();
     super.dispose();
   }
 }

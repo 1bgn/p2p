@@ -6,7 +6,7 @@ import '../../controller/transfer_controller.dart';
 
 class FilesTab extends StatelessWidget {
   final TransferController controller;
-  const FilesTab({Key? key, required this.controller}) : super(key: key);
+  const FilesTab({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {

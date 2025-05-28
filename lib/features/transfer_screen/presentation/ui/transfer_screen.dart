@@ -15,7 +15,7 @@ import '../controller/transfer_controller.dart';
 class TransferScreen extends StatefulWidget {
   final String remoteRoomCode;
   final WebSocket socket;
-   TransferScreen({Key? key, required this.remoteRoomCode, required this.socket}) : super(key: key);
+   const TransferScreen({super.key, required this.remoteRoomCode, required this.socket});
 
   @override
   State<TransferScreen> createState() => _TransferScreenState();
@@ -32,6 +32,7 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
   @override
   void dispose() {
     controller.dispose();
+    getIt.resetLazySingleton(instance: controller);
     super.dispose();
   }
   @override

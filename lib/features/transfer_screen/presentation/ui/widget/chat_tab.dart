@@ -4,7 +4,7 @@ import '../../controller/transfer_controller.dart';
 
 class ChatTab extends StatelessWidget {
   final TransferController controller;
-  const ChatTab({Key? key, required this.controller}) : super(key: key);
+  const ChatTab({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {

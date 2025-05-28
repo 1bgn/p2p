@@ -10,7 +10,7 @@ import 'package:injectable/injectable.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:downloads_path_provider_28/downloads_path_provider_28.dart';
+// import 'package:downloads_path_provider_28/downloads_path_provider_28.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../domain/model/file_entry.dart';
@@ -30,12 +30,10 @@ class TransferService {
   final ReceivePort _receivePort = ReceivePort();
   Future<void> pickImages() async {
     final imgs = await ImagePicker().pickMultiImage();
-    if (imgs != null) {
-      for (var img in imgs) {
-        await sendFile(File(img.path));
-      }
+    for (var img in imgs) {
+      await sendFile(File(img.path));
     }
-  }
+    }
 
   Future<void> pickFiles() async {
     final res = await FilePicker.platform.pickFiles(allowMultiple:true);
@@ -101,12 +99,10 @@ class TransferService {
   Future<void> pickAndSend() async {
     if (Platform.isIOS) {
       final imgs = await ImagePicker().pickMultiImage();
-      if (imgs != null) {
-        for (final img in imgs) {
-          await sendFile(File(img.path));
-        }
+      for (final img in imgs) {
+        await sendFile(File(img.path));
       }
-      return;
+          return;
     }
     final res = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (res != null) {
@@ -117,70 +113,78 @@ class TransferService {
   }
 
   Future<void> download(FileEntry entry) async {
+    if (entry.saved) return;
     final bytes = await File(entry.path).readAsBytes();
     String dest = entry.path;
 
-    // Извлекаем расширение, если есть
+    // выделим расширение
     final parts = entry.name.split('.');
     final ext = parts.length > 1 ? parts.last : '';
 
     if (Platform.isMacOS) {
-      // Показываем «Save As…» с фильтром по расширению
       final loc = await getSaveLocation(
         suggestedName: entry.name,
         acceptedTypeGroups: [
-          XTypeGroup(
-            label: 'Files',
-            extensions: ext.isNotEmpty ? [ext] : ['*'],
-          )
+          XTypeGroup(label: 'All Files', extensions: ext.isNotEmpty ? [ext] : ['*'])
         ],
       );
       if (loc != null) {
         var savePath = loc.path;
-        // Если юзер убрал расширение — добавляем
         if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
-          savePath += '.${ext}';
+          savePath += '.$ext';
         }
         final file = File(savePath);
         await file.writeAsBytes(bytes, flush: true);
         dest = file.path;
       }
+
     } else if (Platform.isIOS) {
-      // Сохраняем в Галерею (для фото) или через Save As для остального
+      // запрос прав на запись в фото-библиотеку
       await Permission.photos.request();
+
       if (entry.isImage) {
         final res = await ImageGallerySaver.saveImage(bytes, name: entry.name);
         if (res['filePath'] != null) dest = res['filePath'];
       } else {
+        // для остальных файлов – сохраняем в «Файлы» через диалог
         final loc = await getSaveLocation(
           suggestedName: entry.name,
           acceptedTypeGroups: [
-            XTypeGroup(
-              label: 'Files',
-              extensions: ext.isNotEmpty ? [ext] : ['*'],
-            )
+            XTypeGroup(label: 'All Files', extensions: ext.isNotEmpty ? [ext] : ['*'])
           ],
         );
         if (loc != null) {
           var savePath = loc.path;
           if (ext.isNotEmpty && !savePath.endsWith('.$ext')) {
-            savePath += '.${ext}';
+            savePath += '.$ext';
           }
           final file = File(savePath);
           await file.writeAsBytes(bytes, flush: true);
           dest = file.path;
         }
       }
+
     } else if (Platform.isAndroid) {
-      // Папка «Загрузки»
-      final dir = await DownloadsPathProvider.downloadsDirectory;
-      if (dir != null) {
-        final file = File('${dir.path}/${entry.name}');
-        await file.writeAsBytes(bytes, flush: true);
-        dest = file.path;
+      if (entry.isImage) {
+        // сохраняем в «Загрузки» (или можно сразу в галерею через ImageGallerySaver)
+        // final dir = await DownloadsPathProvider.downloadsDirectory;
+        // if (dir != null) {
+        //   final file = File('${dir.path}/${entry.name}');
+        //   await file.writeAsBytes(bytes, flush: true);
+        //   dest = file.path;
+        // }
+      } else {
+        // пусть пользователь выберет папку
+        final directory = await FilePicker.platform.getDirectoryPath();
+        if (directory != null) {
+          final file = File('$directory/${entry.name}');
+          await file.writeAsBytes(bytes, flush: true);
+          dest = file.path;
+        }
       }
+
     } else {
-      // Дефолтный fallback
+      // fallback: временный каталог
       final tmp = await getTemporaryDirectory();
       final file = File('${tmp.path}/${entry.name}');
       await file.writeAsBytes(bytes, flush: true);
@@ -216,19 +220,19 @@ Future<void> parserEntry(List<dynamic> args) async {
         stash = stash.sublist(4);
       }
       if (header == null) {
-        if (stash.length < hLen!) break;
-        final str = utf8.decode(stash.sublist(0, hLen!));
+        if (stash.length < hLen) break;
+        final str = utf8.decode(stash.sublist(0, hLen));
         header = jsonDecode(str) as Map<String, dynamic>;
-        stash = stash.sublist(hLen!);
-        if (header!['type'] == 'file') {
-          remaining = header!['size'] as int;
+        stash = stash.sublist(hLen);
+        if (header['type'] == 'file') {
+          remaining = header['size'] as int;
           final tmp = await getTemporaryDirectory();
-          sink = File('${tmp.path}/${header!['name']}').openWrite();
+          sink = File('${tmp.path}/${header['name']}').openWrite();
         }
       }
-      final type = header!['type'] as String;
+      final type = header['type'] as String;
       if (type == 'text') {
-        final text = header!['text'] as String;
+        final text = header['text'] as String;
         uiPort.send({'type': 'text', 'text': text});
         header = null;
         hLen = null;
@@ -242,10 +246,10 @@ Future<void> parserEntry(List<dynamic> args) async {
         stash = stash.sublist(take);
         remaining = need - take;
         if (remaining == 0) {
-          await sink!.flush();
-          await sink!.close();
+          await sink.flush();
+          await sink.close();
           final tmp = await getTemporaryDirectory();
-          uiPort.send({'type': 'file', 'name': header!['name'], 'path': '${tmp.path}/${header!['name']}'});
+          uiPort.send({'type': 'file', 'name': header['name'], 'path': '${tmp.path}/${header['name']}'});
           header = null;
           hLen = null;
           continue;
