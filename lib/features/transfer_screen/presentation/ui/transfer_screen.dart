@@ -28,6 +28,11 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
   void initState() {
     super.initState();
     controller.init(widget.remoteRoomCode, widget.socket);
+    effect((){
+      if(controller.disconnected.value){
+        AutoRouter.of(context).pop();
+      }
+    });
   }
   @override
   void dispose() {

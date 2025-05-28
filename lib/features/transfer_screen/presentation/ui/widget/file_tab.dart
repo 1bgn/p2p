@@ -42,7 +42,9 @@ class FilesTab extends StatelessWidget {
           ),
           trailing: IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () => controller.download(f),
+            onPressed: (){
+              controller.download(f);
+            },
           ),
           onTap: () {
             if (f.isImage) {

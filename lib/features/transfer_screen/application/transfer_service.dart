@@ -9,10 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+// import 'package:image_gallery_saver/image_gallery_saver.dart';
 // import 'package:downloads_path_provider_28/downloads_path_provider_28.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:saver_gallery/saver_gallery.dart';
 import '../domain/model/file_entry.dart';
 
 /// Events emitted from parser isolate
@@ -113,7 +113,7 @@ class TransferService {
   }
 
   Future<void> download(FileEntry entry) async {
-    if (entry.saved) return;
+    // if (entry.saved) return;
     final bytes = await File(entry.path).readAsBytes();
     String dest = entry.path;
 
@@ -143,8 +143,18 @@ class TransferService {
       await Permission.photos.request();
 
       if (entry.isImage) {
-        final res = await ImageGallerySaver.saveImage(bytes, name: entry.name);
-        if (res['filePath'] != null) dest = res['filePath'];
+        // final res = await ImageGallerySaver.saveImage(bytes, name: entry.name);
+        final res = await SaverGallery.saveImage(
+   bytes,
+    quality: 100,
+    fileName: entry.name,
+    androidRelativePath: "Pictures/BeamDrop/images",
+    skipIfExists: false,
+  );
+        // if (res['filePath'] != null) dest = res['filePath'];
+        if(res.isSuccess ){
+
+        }
       } else {
         // для остальных файлов – сохраняем в «Файлы» через диалог
         final loc = await getSaveLocation(
@@ -166,13 +176,15 @@ class TransferService {
 
     } else if (Platform.isAndroid) {
       if (entry.isImage) {
+        print("save on android");
         // сохраняем в «Загрузки» (или можно сразу в галерею через ImageGallerySaver)
-        // final dir = await DownloadsPathProvider.downloadsDirectory;
-        // if (dir != null) {
-        //   final file = File('${dir.path}/${entry.name}');
-        //   await file.writeAsBytes(bytes, flush: true);
-        //   dest = file.path;
-        // }
+         final res = await SaverGallery.saveImage(
+   bytes,
+    quality: 100,
+    fileName: entry.name,
+    androidRelativePath: "Pictures/BeamDrop/images",
+    skipIfExists: false,
+  );
       } else {
         // пусть пользователь выберет папку
         final directory = await FilePicker.platform.getDirectoryPath();

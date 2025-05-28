@@ -13,12 +13,15 @@ class TransferController {
   final messages = signal(List<String>.empty());
   final files = signal(List<FileEntry>.empty());
   final text = signal('');
-
+  final disconnected = signal(false);
   TransferController(this.service);
 
   void init(String roomCode, WebSocket socket) {
     service.connect(roomCode, socket);
     _sub = service.messageStream.listen(_handleEvent);
+    socket.done.then((_) {
+      disconnected.value = true;
+    });
   }
   Future<void> pickImages() => service.pickImages();
 

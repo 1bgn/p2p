@@ -10,56 +10,62 @@ import '../domain/models/device_info.dart';
 
 const discoveryPort = 12345;
 const discoveryInterval = Duration(seconds: 1);
-const prefix = 'DISCOVER:';                 // DISCOVER:<room>:<port>
 
-/// Возвращает список broadcast-адресов всех IPv4-интерфейсов.
-Future<List<InternetAddress>> _calcBroadcast() async {
-  if (kIsWeb) return [InternetAddress('255.255.255.255')];
-  final info = NetworkInfo();
-  final ip   = await info.getWifiIP();
-  final mask = await info.getWifiSubmask();
-  if (ip == null || mask == null) {
-    return [InternetAddress('255.255.255.255')];
-  }
-  // simple bitwise-or: broadcast = ip | ~mask
-  final ipBytes   = ip.split('.').map(int.parse).toList();
-  final maskBytes = mask.split('.').map(int.parse).toList();
-  final bcBytes   = List<int>.generate(4, (i) => ipBytes[i] | (255 ^ maskBytes[i]));
-  return [InternetAddress(bcBytes.join('.'))];
-}
+/// Через сколько считать устройство “мертвым”
+ const _ttl = Duration(seconds: 5);
+
 @lazySingleton
 class DiscoveryServiceUdp {
-  // DiscoveryServiceUdp._();
-  // static final instance = DiscoveryServiceUdp._();
-
   final _ctrl = StreamController<List<DeviceInfo>>.broadcast();
   Stream<List<DeviceInfo>> get stream => _ctrl.stream;
-  Stream<List<DeviceInfo>> get devicesStream => _ctrl.stream;
-  final _map = <String, DeviceInfo>{};
-  RawDatagramSocket? _recv, _send;
-  Timer? _timer;
-  List<InternetAddress> _targets = [InternetAddress('255.255.255.255')];
 
+  /// карту ключ→DeviceInfo теперь будем чистить по TTL
+  final _map = <String, DeviceInfo>{};
+
+  RawDatagramSocket? _recv, _send;
+  Timer? _broadcastTimer, _purgeTimer;
+  List<InternetAddress> _targets = [InternetAddress('255.255.255.255')];
+  static Future<List<InternetAddress>> _calcBroadcast() async {
+    if (kIsWeb) return [InternetAddress('255.255.255.255')];
+    final info = NetworkInfo();
+    final ip   = await info.getWifiIP();
+    final mask = await info.getWifiSubmask();
+    if (ip == null || mask == null) {
+      return [InternetAddress('255.255.255.255')];
+    }
+    final ipBytes   = ip.split('.').map(int.parse).toList();
+    final maskBytes = mask.split('.').map(int.parse).toList();
+    final bcBytes   = List<int>.generate(
+        4, (i) => ipBytes[i] | (255 ^ maskBytes[i])
+    );
+    return [InternetAddress(bcBytes.join('.'))];
+  }
   Future<void> start(String room, int tcpPort) async {
     _targets = await _calcBroadcast();
 
+    // Настраиваем приёмник
     _recv = await RawDatagramSocket.bind(
       InternetAddress.anyIPv4, discoveryPort,
       reuseAddress: true, reusePort: true,
-    );
-    _recv!.listen(_onRead);
+    )..listen(_onRead);
 
-    _send = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    _send!.broadcastEnabled = true;
+    // Настраиваем отправитель
+    _send = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0)
+      ..broadcastEnabled = true;
 
-    _timer = Timer.periodic(discoveryInterval,
+    // Периодическая рассылка DISCOVER
+    _broadcastTimer = Timer.periodic(discoveryInterval,
             (_) => _broadcast(room, tcpPort));
+
+    // И — очень важно — чистим _map чаще, чем TTL,
+    // чтобы удалять “мертвые” устройства
+    _purgeTimer = Timer.periodic(Duration(seconds: 1), (_) => _purge());
 
     debugPrint('[UDP] started. Targets: $_targets');
   }
 
   void _broadcast(String room, int port) {
-    final msg = '$prefix$room:$port';
+    final msg = 'DISCOVER:$room:$port';
     for (final t in _targets) {
       _send!.send(utf8.encode(msg), t, discoveryPort);
     }
@@ -71,21 +77,43 @@ class DiscoveryServiceUdp {
     if (dg == null) return;
     final text = utf8.decode(dg.data);
     debugPrint('[UDP] recv ← $text');
-    if (!text.startsWith(prefix)) return;
-    final p = text.split(':');
-    if (p.length < 3) return;
+    if (!text.startsWith('DISCOVER:')) return;
+
+    final parts = text.split(':');
+    if (parts.length < 3) return;
+
+    final key = '${dg.address.address}:${parts[1]}';
     final dev = DeviceInfo(
-      roomCode: p[1],
+      roomCode: parts[1],
       ip: dg.address.address,
-      tcpPort: int.tryParse(p[2]) ?? 0,
+      tcpPort: int.tryParse(parts[2]) ?? 0,
       lastSeen: DateTime.now(),
     );
-    _map['${dev.ip}:${dev.roomCode}'] = dev;
+    _map[key] = dev;
+
+    // сразу отдаём клиенту свежий список
     _ctrl.add(_map.values.toList());
   }
 
+  /// удаляем все записи, у которых lastSeen устарел сильнее, чем _ttl
+  void _purge() {
+    final now = DateTime.now();
+    final removed = _map.keys
+        .where((k) => now.difference(_map[k]!.lastSeen) > _ttl)
+        .toList();
+    if (removed.isNotEmpty) {
+      for (final k in removed) {
+        _map.remove(k);
+        debugPrint('[UDP] purged → $k');
+      }
+      // и снова отдадим обновлённый список
+      _ctrl.add(_map.values.toList());
+    }
+  }
+
   Future<void> stop() async {
-     _timer?.cancel();
+    _broadcastTimer?.cancel();
+    _purgeTimer?.cancel();
     _send?.close();
     _recv?.close();
     _map.clear();
