@@ -48,11 +48,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
     effect(() {
       final ws = _disc.incoming.value;
       if (ws != null && !_transferOpen) {
-        final remoteIp = (ws.remoteAddress?.address ?? '');
-
-        // Найди deviceInfo по IP
-        final dev = _disc.discovered.value
-            .firstWhere((d) => d.ip == remoteIp, orElse: () => DeviceInfo.fallback(remoteIp));
+        final ip = _disc.server.getIpForSocket(ws);
+        final dev = _disc.discovered.value.firstWhere(
+              (d) => d.ip == ip,
+          orElse: () => DeviceInfo(
+            name: 'Неизвестное',
+            ip: ip,
+            roomCode: 'unknown',
+            tcpPort: 0,
+            lastSeen: DateTime.now(),
+            deviceType: 'Неизвестно',
+          ),
+        );
 
         _transferOpen = true;
         context.router
@@ -60,6 +67,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
             .then((_) => _transferOpen = false);
       }
     });
+
   }
 
   Future<void> _connect(DeviceInfo d) async {
