@@ -102,7 +102,7 @@ class DiscoveryServiceUdp {
 
     _recv = await RawDatagramSocket.bind(
       InternetAddress.anyIPv4, discoveryPort,
-      reuseAddress: true, reusePort: true,
+      reuseAddress: true, reusePort: false,
     )..listen(_onRead);
 
     _send = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0)
@@ -125,7 +125,7 @@ class DiscoveryServiceUdp {
     for (final t in _targets) {
       _send!.send(utf8.encode(msg), t, discoveryPort);
     }
-    debugPrint('[UDP] send → $msg');
+    // debugPrint('[UDP] send → $msg');
   }
 
   void _onRead(RawSocketEvent event) {
@@ -133,7 +133,7 @@ class DiscoveryServiceUdp {
     if (dg == null) return;
 
     final text = utf8.decode(dg.data);
-    debugPrint('[UDP] recv ← $text');
+    // debugPrint('[UDP] recv ← $text');
 
     Map<String, dynamic> obj;
     try {

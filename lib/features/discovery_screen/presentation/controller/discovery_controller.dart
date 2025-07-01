@@ -28,7 +28,10 @@ class DiscoveryController {
 
   Future<int> startServer() async {
     final port = await server.start(preferredPort: 0);
-    server.stream.listen((ws) => incoming.value = ws);
+    server.stream.listen((ws) {
+      print("create socket connection");
+      incoming.value = ws;
+    });
     return port;
   }
 
@@ -41,27 +44,31 @@ class DiscoveryController {
   Future<void> start(String room, int tcpPort) async {
     // Запускаем альтернативный UDP-Discovery
     await _udp.start(room, tcpPort);
-    _udpSub = _udp.stream.listen(_mergeList);
 
+    _udpSub = _udp.stream.listen(_mergeList);
     // Подписываемся на mDNS
-    _nsdSub = _nsd.stream.listen((s) async {
-      if (s.hostname == null) return;
-      // Получаем тип устройства так же, как и в UDP
-      final type = await _udp.getDeviceType();
-      // Имя может приходить в TXT, иначе — локальный hostname
-      final name = s.txt?['name'] as String? ?? Platform.localHostname;
-      final roomCode = s.txt?['room'] as String? ?? 'unknown';
-      final port = s.port ?? 0;
-      final dev = DeviceInfo(
-        name: name,
-        roomCode: roomCode,
-        ip: s.hostname!,
-        tcpPort: port,
-        lastSeen: DateTime.now(),
-        deviceType: type,
-      );
-      _merge(dev);
-    });
+
+    // _nsdSub = _nsd.stream.listen((s) async {
+    //
+    //   if (s.hostname == null) return;
+    //   // Получаем тип устройства так же, как и в UDP
+    //   final type = await _udp.getDeviceType();
+    //
+    //   // Имя может приходить в TXT, иначе — локальный hostname
+    //   final name = s.txt?['name'] as String? ?? Platform.localHostname;
+    //   final roomCode = s.txt?['room'] as String? ?? 'unknown';
+    //   final port = s.port ?? 0;
+    //   final dev = DeviceInfo(
+    //     name: name,
+    //     roomCode: roomCode,
+    //     ip: s.hostname!,
+    //     tcpPort: port,
+    //     lastSeen: DateTime.now(),
+    //     deviceType: type,
+    //   );
+    //
+    //   _merge(dev);
+    // });
 
     await _nsd.discoverServices('_p2ptransfer._tcp.');
     _ttlTimer = Timer.periodic(const Duration(seconds: 5), (_) => _purge());
@@ -72,6 +79,7 @@ class DiscoveryController {
   void _merge(DeviceInfo d) {
     _cache[d.ip] = d;
     _refresh();
+
   }
 
   void _purge() {

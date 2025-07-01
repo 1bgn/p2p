@@ -72,9 +72,11 @@ class _TransferScreenState extends State<TransferScreen> with SignalsMixin {
                   Tab(text: 'Chat'),
                   Tab(text: 'Files'),
                 ],
-                labelStyle: TextStyle(fontSize: 16,color: Color.fromARGB(255, 93, 111, 230)),
+                labelStyle: TextStyle(
+                  fontSize: 16,
+                  color: Color.fromARGB(255, 93, 111, 230),
+                ),
                 indicatorColor: Color.fromARGB(255, 93, 111, 230),
-
               ),
             ),
 

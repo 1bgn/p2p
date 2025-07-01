@@ -42,17 +42,21 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
     await requestNecessaryPermissions();
 
     final port = await _disc.startServer();
+
     await _disc.start(Platform.localHostname, port);
 
     effect(() {
       final ws = _disc.incoming.value;
-      if (ws != null && !_transferOpen && _incomingDevice != null) {
+      if (ws != null && !_transferOpen) {
+        final remoteIp = (ws.remoteAddress?.address ?? '');
+
+        // Найди deviceInfo по IP
+        final dev = _disc.discovered.value
+            .firstWhere((d) => d.ip == remoteIp, orElse: () => DeviceInfo.fallback(remoteIp));
+
         _transferOpen = true;
         context.router
-            .push(TransferRoute(
-          socket: ws,
-          deviceInfo: _incomingDevice!,
-        ))
+            .push(TransferRoute(socket: ws, deviceInfo: dev))
             .then((_) => _transferOpen = false);
       }
     });
@@ -65,10 +69,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
     if (!mounted) return;
     _transferOpen = true;
     context.router
-        .push(TransferRoute(
-      socket: ws,
-      deviceInfo: d,
-    ))
+        .push(TransferRoute(socket: ws, deviceInfo: d))
         .then((_) => _transferOpen = false);
   }
 
@@ -94,13 +95,28 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
       // appBar: AppBar(title: const Text('P2P Discovery')),
       body: Column(
         children: [
-          SizedBox(height: 32,),
-          Image.asset("assets/logo.png",height: 200,),
-          Row(children: [Expanded(child: Text("BeamDrop",textAlign: TextAlign.center,style: TextStyle(fontSize: 32,fontWeight: FontWeight.w700),))],),
+          SizedBox(height: 32),
+
+          Image.asset("assets/logo.png", height: 200),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "BeamDrop",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
           Expanded(
             child: Container(
-              margin: EdgeInsets.only(left: 24,right: 24,top: 24,bottom: 32),
-              decoration: BoxDecoration(border: Border.all(color: Colors.grey,),color: Colors.white,borderRadius: BorderRadius.all(Radius.circular(12))),
+              margin: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 32),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
               child: ListView.builder(
                 padding: EdgeInsets.zero,
                 itemCount: devices.length,
@@ -108,16 +124,17 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
                 itemBuilder: (_, i) {
                   final d = devices[i];
                   return GestureDetector(
-                    onTap: (){
+                    onTap: () {
                       _connect(d);
                     },
                     child: Container(
-                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey)),),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: Colors.grey)),
+                      ),
                       child: ListTile(
                         leading: Icon(_iconForType(d.deviceType)),
                         title: Text(d.name),
                         subtitle: Text('${d.ip}:${d.tcpPort}'),
-
                       ),
                     ),
                   );
