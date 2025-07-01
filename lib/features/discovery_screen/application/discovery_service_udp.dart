@@ -102,7 +102,7 @@ class DiscoveryServiceUdp {
 
     _recv = await RawDatagramSocket.bind(
       InternetAddress.anyIPv4, discoveryPort,
-      reuseAddress: true, reusePort: false,
+      reuseAddress: true, reusePort: true,
     )..listen(_onRead);
 
     _send = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0)

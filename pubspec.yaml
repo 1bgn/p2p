@@ -33,6 +33,7 @@ dependencies:
   open_filex: ^4.7.0
   flutter_nsd: ^1.6.0
   auto_route: ^10.0.1
+  nsd: any
   flutter_svg: ^2.1.0
 
 dev_dependencies:
