@@ -33,10 +33,13 @@ dependencies:
   open_filex: ^4.7.0
   flutter_nsd: ^1.6.0
   auto_route: ^10.0.1
+
   nsd: any
   flutter_svg: ^2.1.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+
   flutter_test:
     sdk: flutter
   freezed: ^3.0.6
@@ -46,7 +49,19 @@ dev_dependencies:
   json_serializable: any
   auto_route_generator: ^10.0.1
   injectable_generator: ^2.7.0
-
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/foreground.png"
+  adaptive_icon_background: "assets/background.png"
+  adaptive_icon_foreground: "assets/foreground.png"
+  windows:
+    generate: true
+    image_path: "assets/main_logo.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/rounded_main_logo.png"
 
 flutter:
   uses-material-design: true

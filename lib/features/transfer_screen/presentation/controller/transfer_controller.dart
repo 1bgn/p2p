@@ -45,7 +45,7 @@ class TransferController {
 
   void _handleEvent(TransferEvent event) {
     if (event is TextEvent) {
-      final ms = 'Remote: ${event.text}';
+      final ms = '${event.text}';
       messages.value = [...messages.value, ms];
     } else if (event is FileEvent) {
       final entry = event.entry;
@@ -99,7 +99,7 @@ class TransferController {
     final t = text.value.trim();
     if (t.isEmpty) return;
     service.sendText(t);
-    messages.value = [...messages.value, 'Me: $t'];
+    messages.value = [...messages.value, '$t'];
     text.value = '';
   }
 

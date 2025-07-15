@@ -1,14 +1,13 @@
 import 'dart:io';
-import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../../di/injectable.dart';
 import '../../../../router/app_router.dart';
-
 import '../../../../utils/permissions.dart';
 import '../../domain/models/device_info.dart';
 import '../controller/discovery_controller.dart';
@@ -50,7 +49,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
       if (ws != null && !_transferOpen) {
         final ip = _disc.server.getIpForSocket(ws);
         final dev = _disc.discovered.value.firstWhere(
-              (d) => d.ip == ip,
+          (d) => d.ip == ip,
           orElse: () => DeviceInfo(
             name: 'Неизвестное',
             ip: ip,
@@ -67,7 +66,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
             .then((_) => _transferOpen = false);
       }
     });
-
   }
 
   Future<void> _connect(DeviceInfo d) async {
@@ -125,29 +123,54 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SignalsMixin {
                 color: Colors.white,
                 borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: devices.length,
-                // separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (_, i) {
-                  final d = devices[i];
-                  return GestureDetector(
-                    onTap: () {
-                      _connect(d);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Colors.grey)),
-                      ),
-                      child: ListTile(
-                        leading: Icon(_iconForType(d.deviceType)),
-                        title: Text(d.name),
-                        subtitle: Text('${d.ip}:${d.tcpPort}'),
-                      ),
+              child: devices.isEmpty
+                  ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Text(
+                                  "Откройте приложение на другом устройстве, которое подключено к той же сети WI-FI",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.black,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: devices.length,
+                      // separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (_, i) {
+                        final d = devices[i];
+                        return GestureDetector(
+                          onTap: () {
+                            _connect(d);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: Colors.grey),
+                              ),
+                            ),
+                            child: ListTile(
+                              leading: Icon(_iconForType(d.deviceType)),
+                              title: Text(d.name),
+                              subtitle: Text('${d.ip}:${d.tcpPort}'),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ),
         ],

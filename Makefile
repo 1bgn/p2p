@@ -18,3 +18,22 @@ clean:
 
 ## Clean and rebuild all generated files
 rebuild: clean build
+
+buildicons:
+	flutter pub run flutter_launcher_icons
+rmdmg:
+	mv build/macos/Build/Products/Release/beam_drop.app build/macos/Build/Products/Release/BeamDrop.app
+builddmg:
+	create-dmg \
+	--volname "BeamDrop" \
+	--window-pos 200 120 \
+	--window-size 800 400 \
+	--icon-size 100 \
+	--icon "BeamDrop.app" 200 190 \
+	--hide-extension "BeamDrop.app" \
+	--app-drop-link 600 185 \
+	/Users/semenhrispens/projects/beam_drop/BeamDrop.dmg \
+	/Users/semenhrispens/projects/beam_drop/build/macos/Build/Products/Release/BeamDrop.app
+
+
+

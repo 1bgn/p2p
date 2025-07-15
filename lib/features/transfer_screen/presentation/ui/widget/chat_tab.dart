@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../controller/transfer_controller.dart';
 
@@ -19,7 +20,12 @@ class ChatTab extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(controller.messages.value[i],style: TextStyle(fontSize: 16,),),
+        child: Row(children: [Expanded(child: SelectableText(controller.messages.value[i],style: TextStyle(fontSize: 16),),),InkWell(onTap: (){
+          Clipboard.setData( ClipboardData(text: controller.messages.value[i])).then((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Скопировано')));
+          });
+        },child: Icon(Icons.copy))],)
       ),
     );
   }

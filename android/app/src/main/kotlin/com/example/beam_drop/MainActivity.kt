@@ -1,4 +1,4 @@
-package com.example.beam_drop
+package com.khrispens.beam_drop
 
 import io.flutter.embedding.android.FlutterActivity
 
